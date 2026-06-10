@@ -1,0 +1,6 @@
+# Proxy API calls to the backend server (update with your backend URL once deployed)
+/api/*  https://api.cephasgm.org/api/:splat  200
+
+# SPA fallback (optional – we have separate HTML pages, so not strictly needed)
+# But for clean URLs, uncomment the line below if needed:
+# /*    /index.html   200
