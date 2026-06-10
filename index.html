@@ -1,0 +1,475 @@
+<!-- frontend/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <meta name="theme-color" content="#0a1120">
+  <meta name="description" content="EchoShield – AI-Powered Drone Defense Simulator by CephasGM">
+  <title>EchoShield - Anti-Drone RF Simulator | CephasGM</title>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --bg-primary: #0a1120;
+      --bg-secondary: #111b2e;
+      --bg-card: #1a2940;
+      --accent: #2d7ee7;
+      --accent-hover: #1e5bbf;
+      --text: #e0e6f0;
+      --text-muted: #8899b0;
+      --border: #2a3a55;
+      --shadow: 0 8px 32px rgba(0,0,0,0.3);
+      --radius: 12px;
+      --max-width: 1200px;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text);
+      line-height: 1.6;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    header {
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(8px);
+    }
+    nav {
+      max-width: var(--max-width);
+      margin: 0 auto;
+      padding: 0.9rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    .logo {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .logo i {
+      color: var(--accent);
+    }
+    .logo span {
+      background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 2rem;
+      list-style: none;
+    }
+    .nav-links a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+    .nav-links a:hover {
+      color: #fff;
+    }
+    .nav-links .btn {
+      padding: 0.5rem 1.2rem;
+      border-radius: 6px;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+      text-decoration: none;
+    }
+    .btn-primary:hover {
+      background: var(--accent-hover);
+      transform: translateY(-1px);
+    }
+    .btn-secondary {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text);
+      text-decoration: none;
+    }
+    .btn-secondary:hover {
+      background: rgba(255,255,255,0.05);
+    }
+
+    .hero {
+      max-width: var(--max-width);
+      margin: 3rem auto 2rem;
+      padding: 0 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 3rem;
+      flex-wrap: wrap;
+    }
+    .hero-content {
+      flex: 1 1 400px;
+    }
+    .hero-content h1 {
+      font-size: 2.8rem;
+      font-weight: 800;
+      margin-bottom: 1rem;
+      line-height: 1.2;
+      background: linear-gradient(135deg, #60a5fa, #a78bfa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero-content .tagline {
+      font-size: 1.25rem;
+      color: var(--text-muted);
+      margin-bottom: 1.5rem;
+    }
+    .hero-content .description {
+      margin-bottom: 2rem;
+    }
+    .cta-buttons {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+    }
+    .hero-visual {
+      flex: 1 1 300px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .hero-visual i {
+      font-size: 12rem;
+      color: rgba(45, 126, 231, 0.15);
+      filter: drop-shadow(0 0 30px rgba(45,126,231,0.3));
+    }
+
+    .section {
+      max-width: var(--max-width);
+      margin: 3rem auto;
+      padding: 0 1.5rem;
+    }
+    .section h2 {
+      font-size: 2rem;
+      margin-bottom: 1.5rem;
+      color: #fff;
+    }
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem;
+    }
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.8rem;
+      box-shadow: var(--shadow);
+      transition: transform 0.2s;
+    }
+    .card:hover {
+      transform: translateY(-4px);
+    }
+    .card i {
+      font-size: 2.2rem;
+      color: var(--accent);
+      margin-bottom: 1rem;
+    }
+    .card h3 {
+      margin-bottom: 0.8rem;
+    }
+    .card p {
+      color: var(--text-muted);
+    }
+
+    .steps {
+      counter-reset: step;
+    }
+    .step {
+      display: flex;
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+      align-items: flex-start;
+    }
+    .step-number {
+      background: var(--accent);
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 1.3rem;
+      flex-shrink: 0;
+      color: #fff;
+    }
+    .step-content h3 {
+      color: #fff;
+      margin-bottom: 0.4rem;
+    }
+
+    footer {
+      margin-top: auto;
+      background: var(--bg-secondary);
+      border-top: 1px solid var(--border);
+      text-align: center;
+      padding: 1.8rem 1.5rem;
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+    footer a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+    .small-note {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+
+    @media (max-width: 768px) {
+      .hero {
+        flex-direction: column;
+        text-align: center;
+      }
+      .hero-content h1 {
+        font-size: 2.2rem;
+      }
+      .nav-links {
+        width: 100%;
+        justify-content: center;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <nav>
+      <div class="logo">
+        <i class="fa-solid fa-shield-halved"></i>
+        <span>CephasGM</span> EchoShield
+      </div>
+      <ul class="nav-links" id="nav-links">
+        <li><a href="#features">Features</a></li>
+        <li><a href="#how-it-works">How It Works</a></li>
+        <li><a href="#protocols">Protocols</a></li>
+        <li id="nav-auth"><a href="signin.html" class="btn btn-secondary">Sign In</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="hero-content">
+        <h1>EchoShield</h1>
+        <p class="tagline">AI-powered drone defence simulation.</p>
+        <p class="description">
+          EchoShield simulates real‑world drone communication protocols (Wi‑Fi, LoRa, DJI) and uses a neural network to detect, classify, and generate optimal jamming signals.  
+          Train your counter‑drone AI safely in a virtual RF environment. Ideal for military, airport security, and defence researchers.
+        </p>
+        <div class="cta-buttons" id="cta-buttons">
+          <a href="signup.html" class="btn btn-primary"><i class="fa-solid fa-user-plus"></i> Sign Up Free</a>
+          <a href="signin.html" class="btn btn-secondary"><i class="fa-solid fa-right-to-bracket"></i> Sign In</a>
+        </div>
+      </div>
+      <div class="hero-visual">
+        <i class="fa-solid fa-tower-broadcast"></i>
+      </div>
+    </section>
+
+    <section id="features" class="section">
+      <h2>Why EchoShield?</h2>
+      <div class="grid-3">
+        <div class="card">
+          <i class="fa-solid fa-microchip"></i>
+          <h3>RF Simulation Engine</h3>
+          <p>Generate realistic IQ samples for Wi‑Fi (OFDM, 64‑QAM), LoRa (chirp spread spectrum), and DJI frequency‑hopping protocols – all in Python without SDR hardware.</p>
+        </div>
+        <div class="card">
+          <i class="fa-solid fa-brain"></i>
+          <h3>AI Detection & Classification</h3>
+          <p>A convolutional neural network (CNN) analyzes spectrograms in real time, identifying the drone protocol with high confidence (>95% on synthetic data).</p>
+        </div>
+        <div class="card">
+          <i class="fa-solid fa-bolt"></i>
+          <h3>Smart Jamming Advisor</h3>
+          <p>Once a threat is classified, EchoShield suggests the most effective jamming waveform: wideband noise, chirp jammer, or sweeping tones – tailored to the protocol.</p>
+        </div>
+        <div class="card">
+          <i class="fa-solid fa-cloud-arrow-up"></i>
+          <h3>Firebase Integration</h3>
+          <p>Secure authentication (email/password + Google Sign‑In) and Firestore logging for every simulation run. Your research stays private and auditable.</p>
+        </div>
+        <div class="card">
+          <i class="fa-solid fa-mobile-screen-button"></i>
+          <h3>Progressive Web App</h3>
+          <p>Install EchoShield on your desktop or mobile. Works offline, exactly like a native app, served over HTTPS from Cloudflare Pages.</p>
+        </div>
+        <div class="card">
+          <i class="fa-solid fa-shield-virus"></i>
+          <h3>Algorithm IP Ready</h3>
+          <p>The core jamming AI can later be flashed onto a software‑defined radio (SDR). You own the IP – military and airport security buyers need this today.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="how-it-works" class="section">
+      <h2>How It Works</h2>
+      <div class="steps">
+        <div class="step">
+          <div class="step-number">1</div>
+          <div class="step-content">
+            <h3>Sign Up & Authenticate</h3>
+            <p>Create an account using your email or Google. Your data is protected by Firebase Authentication and Firestore security rules.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-number">2</div>
+          <div class="step-content">
+            <h3>Select a Drone Protocol</h3>
+            <p>From the dashboard, choose between Wi‑Fi 2.4 GHz, LoRa 868 MHz, or DJI Ocusync. You can also request a custom synthetic scenario.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-number">3</div>
+          <div class="step-content">
+            <h3>Run the Simulation</h3>
+            <p>The Python backend generates a 1‑second IQ capture, computes a spectrogram, and sends it to the AI classifier.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-number">4</div>
+          <div class="step-content">
+            <h3>Get AI Analysis & Jamming</h3>
+            <p>The neural network identifies the protocol and returns a confidence score. The system then proposes an optimal jamming waveform.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-number">5</div>
+          <div class="step-content">
+            <h3>Review & Export</h3>
+            <p>Visualize the spectrogram and jamming parameters. Every run is logged to your history for further study or reporting.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="protocols" class="section">
+      <h2>Simulated Drone Protocols</h2>
+      <div class="grid-3">
+        <div class="card">
+          <i class="fa-solid fa-wifi"></i>
+          <h3>Wi‑Fi (2.4 GHz)</h3>
+          <p>OFDM with 64 subcarriers, 20 MHz bandwidth, 64‑QAM modulation – typical of many consumer drones. Jamming strategy: wideband noise.</p>
+        </div>
+        <div class="card">
+          <i class="fa-solid fa-signal"></i>
+          <h3>LoRa 868 MHz</h3>
+          <p>Chirp spread spectrum (SF7‑SF12), 125 kHz bandwidth. Long‑range, low‑power. Jamming strategy: synchronous chirp jammer.</p>
+        </div>
+        <div class="card">
+          <i class="fa-solid fa-helicopter"></i>
+          <h3>DJI Ocusync</h3>
+          <p>Proprietary frequency‑hopping over 2.4‑2.483 GHz. Our simulator emulates hopping patterns. Jamming strategy: sweeping CW tones.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    Copyright © 2025 Cephas GM | Innovating for Tomorrow
+  </footer>
+
+  <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-auth-compat.js"></script>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCM_7S0zPDz4G2xzlevL3pwj7U0pYih-Zk",
+      authDomain: "echoshield-38f36.firebaseapp.com",
+      projectId: "echoshield-38f36",
+      storageBucket: "echoshield-38f36.firebasestorage.app",
+      messagingSenderId: "747286927373",
+      appId: "1:747286927373:web:5c4029593703bb08d6dd44",
+      measurementId: "G-KDCDBN5KGS"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then(reg => console.log('Service Worker registered', reg.scope))
+          .catch(err => console.error('SW registration failed', err));
+      });
+    }
+
+    const navLinks = document.getElementById('nav-links');
+    const ctaButtons = document.getElementById('cta-buttons');
+
+    function updateUIForAuth(user) {
+      const existingAuth = document.getElementById('nav-auth');
+      if (existingAuth) existingAuth.remove();
+      const existingDash = document.getElementById('nav-dashboard');
+      if (existingDash) existingDash.remove();
+
+      const li = document.createElement('li');
+      if (user) {
+        li.id = 'nav-dashboard';
+        li.innerHTML = `<a href="dashboard.html" class="btn btn-primary"><i class="fa-solid fa-gauge-high"></i> Dashboard</a>`;
+        navLinks.appendChild(li);
+
+        const liLogout = document.createElement('li');
+        liLogout.innerHTML = `<a href="#" id="logout-btn" class="btn btn-secondary"><i class="fa-solid fa-arrow-right-from-bracket"></i> Logout</a>`;
+        navLinks.appendChild(liLogout);
+        document.getElementById('logout-btn').addEventListener('click', (e) => {
+          e.preventDefault();
+          auth.signOut().then(() => window.location.href = 'index.html');
+        });
+
+        if (ctaButtons) {
+          ctaButtons.innerHTML = `<a href="dashboard.html" class="btn btn-primary"><i class="fa-solid fa-gauge-high"></i> Go to Dashboard</a>`;
+        }
+      } else {
+        li.id = 'nav-auth';
+        li.innerHTML = `<a href="signin.html" class="btn btn-secondary">Sign In</a>`;
+        navLinks.appendChild(li);
+        if (ctaButtons) {
+          ctaButtons.innerHTML = `
+            <a href="signup.html" class="btn btn-primary"><i class="fa-solid fa-user-plus"></i> Sign Up Free</a>
+            <a href="signin.html" class="btn btn-secondary"><i class="fa-solid fa-right-to-bracket"></i> Sign In</a>`;
+        }
+      }
+    }
+
+    auth.onAuthStateChanged((user) => {
+      updateUIForAuth(user);
+    });
+  </script>
+</body>
+</html>
