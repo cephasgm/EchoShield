@@ -1,0 +1,392 @@
+<!-- frontend/dashboard.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <meta name="theme-color" content="#0a1120">
+  <title>Dashboard - EchoShield | CephasGM</title>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --bg-primary: #0a1120;
+      --bg-secondary: #111b2e;
+      --bg-card: #1a2940;
+      --accent: #2d7ee7;
+      --accent-hover: #1e5bbf;
+      --text: #e0e6f0;
+      --text-muted: #8899b0;
+      --border: #2a3a55;
+      --shadow: 0 8px 32px rgba(0,0,0,0.3);
+      --radius: 12px;
+      --max-width: 1200px;
+      --error: #e74c3c;
+      --success: #2ecc71;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text);
+      line-height: 1.6;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    header {
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(8px);
+    }
+    nav {
+      max-width: var(--max-width);
+      margin: 0 auto;
+      padding: 0.9rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+    }
+    .logo {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .logo i { color: var(--accent); }
+    .logo span {
+      background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .user-info span { color: var(--text-muted); }
+
+    .btn {
+      padding: 0.5rem 1.2rem;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+      font-size: 0.95rem;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+    .btn-primary:hover { background: var(--accent-hover); transform: translateY(-1px); }
+    .btn-secondary {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+    .btn-secondary:hover { background: rgba(255,255,255,0.05); }
+    .btn-danger {
+      background: var(--error);
+      color: #fff;
+    }
+    .btn-danger:hover { background: #c0392b; }
+
+    main {
+      max-width: var(--max-width);
+      margin: 2rem auto;
+      padding: 0 1.5rem;
+      flex: 1;
+    }
+
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+      margin-bottom: 2rem;
+    }
+    @media (max-width: 768px) {
+      .dashboard-grid { grid-template-columns: 1fr; }
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.8rem;
+      box-shadow: var(--shadow);
+    }
+    .card h2 {
+      margin-bottom: 1.5rem;
+      font-size: 1.6rem;
+      color: #fff;
+    }
+
+    .form-group {
+      margin-bottom: 1.5rem;
+    }
+    .form-group label {
+      display: block;
+      margin-bottom: 0.4rem;
+      font-weight: 500;
+    }
+    .form-group select {
+      width: 100%;
+      padding: 0.8rem;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--bg-primary);
+      color: var(--text);
+      font-size: 1rem;
+      outline: none;
+    }
+    .form-group select:focus { border-color: var(--accent); }
+
+    .spinner {
+      border: 3px solid rgba(255,255,255,0.1);
+      border-top: 3px solid var(--accent);
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      animation: spin 0.8s linear infinite;
+      display: inline-block;
+      vertical-align: middle;
+      margin-left: 0.5rem;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    .result-box {
+      margin-top: 1.5rem;
+      padding: 1rem;
+      background: rgba(255,255,255,0.03);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      display: none;
+    }
+    .result-box p { margin-bottom: 0.5rem; }
+    .result-box .detected { font-weight: 700; color: var(--success); }
+    .jamming-params {
+      margin-top: 1rem;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.5rem;
+    }
+    .jamming-params div {
+      background: var(--bg-primary);
+      padding: 0.5rem;
+      border-radius: 4px;
+    }
+    .jamming-params span { color: var(--text-muted); font-size: 0.85rem; }
+    .jamming-params strong { display: block; }
+
+    .spectrogram-img {
+      max-width: 100%;
+      margin-top: 1rem;
+      border-radius: 8px;
+      display: none;
+    }
+
+    footer {
+      margin-top: auto;
+      background: var(--bg-secondary);
+      border-top: 1px solid var(--border);
+      text-align: center;
+      padding: 1.8rem 1.5rem;
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <nav>
+      <div class="logo">
+        <i class="fa-solid fa-shield-halved"></i>
+        <span>CephasGM</span> EchoShield
+      </div>
+      <div class="user-info" id="user-info">
+        <span id="user-email">Loading...</span>
+        <button id="logout-btn" class="btn btn-secondary"><i class="fa-solid fa-arrow-right-from-bracket"></i> Logout</button>
+      </div>
+    </nav>
+  </header>
+
+  <main>
+    <div class="dashboard-grid">
+      <!-- Simulation Card -->
+      <div class="card">
+        <h2><i class="fa-solid fa-tower-broadcast"></i> Run Simulation</h2>
+        <div class="form-group">
+          <label for="protocol-select">Select Drone Protocol</label>
+          <select id="protocol-select">
+            <option value="wifi">Wi‑Fi 2.4 GHz</option>
+            <option value="lora">LoRa 868 MHz</option>
+            <option value="dji">DJI Ocusync</option>
+          </select>
+        </div>
+        <button id="start-simulation" class="btn btn-primary"><i class="fa-solid fa-play"></i> Start Simulation</button>
+        <span id="loading-spinner" class="spinner" style="display:none;"></span>
+        <div id="error-message" style="color:var(--error); margin-top:1rem; display:none;"></div>
+
+        <!-- Results Box -->
+        <div class="result-box" id="result-box">
+          <p>Detected Protocol: <span class="detected" id="detected-protocol"></span></p>
+          <p>Confidence: <strong id="confidence"></strong></p>
+          <div class="jamming-params" id="jamming-params"></div>
+          <img id="spectrogram" class="spectrogram-img" alt="Spectrogram">
+        </div>
+      </div>
+
+      <!-- History Card (placeholder, will be enhanced later) -->
+      <div class="card">
+        <h2><i class="fa-solid fa-clock-rotate-left"></i> Recent Runs</h2>
+        <p style="color:var(--text-muted);">Your simulation history will appear here after you run your first test.</p>
+        <ul id="history-list" style="list-style:none; margin-top:1rem;"></ul>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    Copyright © 2025 Cephas GM | Innovating for Tomorrow
+  </footer>
+
+  <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-auth-compat.js"></script>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCM_7S0zPDz4G2xzlevL3pwj7U0pYih-Zk",
+      authDomain: "echoshield-38f36.firebaseapp.com",
+      projectId: "echoshield-38f36",
+      storageBucket: "echoshield-38f36.firebasestorage.app",
+      messagingSenderId: "747286927373",
+      appId: "1:747286927373:web:5c4029593703bb08d6dd44",
+      measurementId: "G-KDCDBN5KGS"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+
+    // API Base URL - change this to your backend address
+    const API_BASE_URL = 'http://localhost:5000';
+
+    // PWA
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(err => console.error('SW registration failed', err));
+      });
+    }
+
+    // --- Auth state ---
+    const userEmailSpan = document.getElementById('user-email');
+    const logoutBtn = document.getElementById('logout-btn');
+
+    auth.onAuthStateChanged(async (user) => {
+      if (!user) {
+        window.location.href = 'signin.html';
+        return;
+      }
+      userEmailSpan.textContent = user.email;
+      // Attach logout
+      logoutBtn.addEventListener('click', () => {
+        auth.signOut().then(() => window.location.href = 'index.html');
+      });
+    });
+
+    // --- Simulation Logic ---
+    const startBtn = document.getElementById('start-simulation');
+    const spinner = document.getElementById('loading-spinner');
+    const errorDiv = document.getElementById('error-message');
+    const resultBox = document.getElementById('result-box');
+    const detectedSpan = document.getElementById('detected-protocol');
+    const confidenceSpan = document.getElementById('confidence');
+    const jammingParamsDiv = document.getElementById('jamming-params');
+    const spectrogramImg = document.getElementById('spectrogram');
+
+    startBtn.addEventListener('click', async () => {
+      const protocol = document.getElementById('protocol-select').value;
+      startBtn.disabled = true;
+      spinner.style.display = 'inline-block';
+      errorDiv.style.display = 'none';
+      resultBox.style.display = 'none';
+
+      try {
+        const idToken = await auth.currentUser.getIdToken();
+        const response = await fetch(`${API_BASE_URL}/api/simulate`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${idToken}`
+          },
+          body: JSON.stringify({ protocol })
+        });
+
+        if (!response.ok) {
+          const errData = await response.json().catch(() => ({}));
+          throw new Error(errData.error || 'Simulation failed');
+        }
+
+        const data = await response.json();
+        displayResults(data);
+      } catch (error) {
+        errorDiv.textContent = 'Error: ' + error.message;
+        errorDiv.style.display = 'block';
+      } finally {
+        startBtn.disabled = false;
+        spinner.style.display = 'none';
+      }
+    });
+
+    function displayResults(data) {
+      detectedSpan.textContent = data.detected_protocol.toUpperCase();
+      confidenceSpan.textContent = (data.confidence * 100).toFixed(1) + '%';
+
+      const jamming = data.jamming;
+      jammingParamsDiv.innerHTML = `
+        <div><span>Center Freq</span><strong>${(jamming.center_freq_hz / 1e6).toFixed(2)} MHz</strong></div>
+        <div><span>Bandwidth</span><strong>${(jamming.bandwidth_hz / 1e6).toFixed(2)} MHz</strong></div>
+        <div><span>Modulation</span><strong>${jamming.modulation}</strong></div>
+        <div><span>Power</span><strong>${jamming.power_dbm} dBm</strong></div>
+      `;
+
+      // Spectrogram image
+      if (data.spectrogram_url) {
+        spectrogramImg.src = `${API_BASE_URL}${data.spectrogram_url}`;
+        spectrogramImg.style.display = 'block';
+      } else {
+        spectrogramImg.style.display = 'none';
+      }
+
+      resultBox.style.display = 'block';
+
+      // Add to history list (simple client-side)
+      addHistoryItem(data.detected_protocol, data.confidence, new Date().toLocaleTimeString());
+    }
+
+    function addHistoryItem(protocol, confidence, time) {
+      const ul = document.getElementById('history-list');
+      const li = document.createElement('li');
+      li.style.padding = '0.5rem 0';
+      li.style.borderBottom = '1px solid var(--border)';
+      li.innerHTML = `<strong>${protocol.toUpperCase()}</strong> - ${(confidence*100).toFixed(0)}% confidence <span style="float:right;color:var(--text-muted);font-size:0.8rem;">${time}</span>`;
+      ul.prepend(li);
+    }
+  </script>
+</body>
+</html>
