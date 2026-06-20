@@ -7,6 +7,8 @@
     <meta name="theme-color" content="#0a121f">
     <link rel="manifest" href="manifest.json">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         html, body { height: 100%; overflow: hidden; }
@@ -76,8 +78,8 @@
         main {
             flex: 1;
             display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            grid-template-rows: auto 1fr auto;
+            grid-template-columns: 2fr 1fr;
+            grid-template-rows: 1fr auto;
             gap: 0.8rem;
             padding: 0.8rem;
             max-width: 1300px;
@@ -92,55 +94,60 @@
             border-radius: 10px;
             padding: 0.8rem;
             overflow: hidden;
+            display: flex;
+            flex-direction: column;
         }
         .card h2 { font-size: 1.1rem; margin-bottom: 0.5rem; color: #fff; }
         .card h2 span { color: #4da8da; }
 
-        /* Radar card */
-        .radar-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100%;
+        /* Map radar card */
+        #mapRadarCard {
+            position: relative;
+            grid-row: span 1;
         }
-        canvas { 
+        #leafletMap {
+            flex: 1;
+            border-radius: 6px;
+            background: #111;
+        }
+        .radar-sweep {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 200px;
+            height: 200px;
+            border: 2px solid rgba(77,168,218,0.5);
             border-radius: 50%;
-            border: 2px solid rgba(77,168,218,0.3);
-            box-shadow: 0 0 20px rgba(77,168,218,0.15);
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: 1000;
         }
-        .status-box {
-            text-align: center;
-            margin-top: 0.4rem;
+        .sweep-line {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            width: 2px;
+            height: 50%;
+            background: linear-gradient(to top, rgba(77,168,218,1), transparent);
+            transform-origin: bottom center;
+            animation: sweepRotate 4s linear infinite;
         }
-        .status-text {
-            font-size: 0.95rem;
+        @keyframes sweepRotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .map-overlay-text {
+            position: absolute;
+            bottom: 5px;
+            left: 10px;
             color: #4da8da;
             font-weight: 600;
-            min-height: 1.4rem;
+            font-size: 0.8rem;
+            background: rgba(0,0,0,0.6);
+            padding: 2px 6px;
+            border-radius: 4px;
+            z-index: 1000;
         }
-        .sub-status {
-            font-size: 0.75rem;
-            color: #94a3b8;
-        }
-
-        /* Map card */
-        .map-card {
-            background: url('https://images.unsplash.com/photo-1506744038136-46273834b3fb?q=80&w=2070&auto=format&fit=crop') center/cover no-repeat;
-            border-radius: 10px;
-            position: relative;
-            min-height: 0;
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-end;
-        }
-        .map-overlay {
-            background: linear-gradient(0deg, rgba(0,0,0,0.8) 0%, transparent 100%);
-            padding: 0.5rem;
-            border-radius: 0 0 10px 10px;
-        }
-        .map-overlay h3 { font-size: 0.95rem; color: #fff; }
-        .map-overlay p { font-size:0.75rem; color:#94a3b8; }
 
         /* Results card */
         .result-grid {
@@ -177,7 +184,7 @@
         /* History collapsible */
         .history-card {
             grid-column: 1 / -1;
-            max-height: 30vh;
+            max-height: 25vh;
             overflow-y: auto;
         }
         .history-table {
@@ -205,7 +212,6 @@
 
         @media (max-width: 768px) {
             main { grid-template-columns: 1fr; grid-template-rows: auto auto auto; }
-            .map-card { height: 150px; }
         }
     </style>
 </head>
@@ -219,26 +225,15 @@
     </header>
 
     <main>
-        <!-- Radar Card -->
-        <div class="card" style="grid-row: span 2;">
-            <div class="radar-container">
-                <canvas id="radarCanvas" width="180" height="180"></canvas>
-                <div class="status-box">
-                    <div class="status-text" id="scanStatus">Initialising...</div>
-                    <div class="sub-status" id="scanSubstatus">Auto‑scan active</div>
-                </div>
-            </div>
+        <!-- Map Radar Card (left, large) -->
+        <div class="card" id="mapRadarCard">
+            <h2><i class="fas fa-satellite-dish"></i> <span>Tactical Radar</span> View</h2>
+            <div id="leafletMap"></div>
+            <div class="map-overlay-text" id="locationText">Acquiring position...</div>
+            <div class="radar-sweep"><div class="sweep-line"></div></div>
         </div>
 
-        <!-- Map Card -->
-        <div class="card map-card" id="mapCard">
-            <div class="map-overlay">
-                <h3><i class="fas fa-satellite"></i> Live Aerial View</h3>
-                <p id="locationText">Acquiring your position...</p>
-            </div>
-        </div>
-
-        <!-- Results Card -->
+        <!-- Results Card (right, smaller) -->
         <div class="card" id="resultsCard">
             <h2><span>Detection</span> Report</h2>
             <div id="noDetection" style="color:#94a3b8; font-size:0.9rem;">No threats detected yet.<br>Radar is scanning automatically.</div>
@@ -256,7 +251,7 @@
             </div>
         </div>
 
-        <!-- History Card (collapsed by default) -->
+        <!-- History Card (collapsed, full width) -->
         <details class="card history-card" style="grid-column: 1 / -1; margin-top:0;">
             <summary style="color:#4da8da; font-weight:600; cursor:pointer; font-size:0.9rem;">
                 <i class="fas fa-history"></i> Mission History
@@ -276,6 +271,8 @@
     <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore-compat.js"></script>
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <script>
         // ---------- Firebase Init ----------
@@ -291,7 +288,6 @@
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const db = firebase.firestore();
-
         const API_BASE = 'https://echoshield-api-4x6z.onrender.com';
 
         // ---------- Auth ----------
@@ -299,7 +295,7 @@
             if (!user) { window.location.href = 'signin.html'; return; }
             document.getElementById('userEmail').textContent = user.email;
             loadHistory(user.uid);
-            initGeoMap();
+            initMap();
             startAutoScan();
         });
 
@@ -307,37 +303,79 @@
             auth.signOut().then(() => window.location.href = 'signin.html');
         });
 
-        // ---------- Geolocation & Map ----------
-        function initGeoMap() {
-            const locationText = document.getElementById('locationText');
-            const mapCard = document.getElementById('mapCard');
+        // ---------- Leaflet Map & Radar ----------
+        let map;
+        let userMarker;
+        let threatMarkers = [];
+        let threatCircle;
 
+        function initMap() {
+            document.getElementById('locationText').textContent = 'Locating...';
+            
             if (!navigator.geolocation) {
-                locationText.textContent = "Geolocation not supported by your browser.";
+                document.getElementById('locationText').textContent = 'Geolocation unsupported';
                 return;
             }
 
             navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    const lat = position.coords.latitude;
-                    const lon = position.coords.longitude;
-                    locationText.textContent = `Your position: ${lat.toFixed(4)}, ${lon.toFixed(4)}`;
-                    
-                    // Use OpenStreetMap static map (free, no API key)
-                    const zoom = 14;
-                    const size = `${mapCard.clientWidth}x${mapCard.clientHeight}` || "400x300";
-                    const marker = `${lat},${lon},red-pushpin`;
-                    const mapUrl = `https://staticmap.openstreetmap.de/staticmap.php?center=${lat},${lon}&zoom=${zoom}&size=${size}&markers=${marker}`;
-                    
-                    mapCard.style.backgroundImage = `url('${mapUrl}')`;
-                    mapCard.style.backgroundSize = 'cover';
-                    mapCard.style.backgroundPosition = 'center';
+                (pos) => {
+                    const lat = pos.coords.latitude;
+                    const lon = pos.coords.longitude;
+                    document.getElementById('locationText').textContent = `Lat: ${lat.toFixed(4)}  Lon: ${lon.toFixed(4)}`;
+
+                    // Initialize map
+                    map = L.map('leafletMap', {
+                        center: [lat, lon],
+                        zoom: 15,
+                        zoomControl: false,
+                        attributionControl: false
+                    });
+
+                    // Dark tile layer (CartoDB dark)
+                    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                        maxZoom: 19
+                    }).addTo(map);
+
+                    // User marker
+                    const userIcon = L.divIcon({
+                        className: 'custom-icon',
+                        html: '<i class="fas fa-shield-alt" style="color:#4da8da; font-size:24px; filter: drop-shadow(0 0 8px #4da8da);"></i>',
+                        iconSize: [30, 30],
+                        iconAnchor: [15, 15]
+                    });
+                    userMarker = L.marker([lat, lon], { icon: userIcon }).addTo(map)
+                        .bindPopup('You are here').openPopup();
+
+                    // Scanning circle (range)
+                    threatCircle = L.circle([lat, lon], {
+                        radius: 1000,
+                        color: '#4da8da',
+                        weight: 1,
+                        fillColor: '#4da8da',
+                        fillOpacity: 0.05,
+                        dashArray: '5, 5'
+                    }).addTo(map);
+
+                    // Start auto-detection
+                    startAutoScan();
                 },
-                (error) => {
-                    locationText.textContent = "Location access denied. Using default view.";
-                    // Keep existing background
+                (err) => {
+                    document.getElementById('locationText').textContent = 'Location access denied. Using default.';
+                    // Fallback: center on Dar es Salaam
+                    map = L.map('leafletMap', {
+                        center: [-6.8, 39.2],
+                        zoom: 13,
+                        zoomControl: false,
+                        attributionControl: false
+                    });
+                    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                        maxZoom: 19
+                    }).addTo(map);
+                    userMarker = L.marker([-6.8, 39.2]).addTo(map)
+                        .bindPopup('Default location').openPopup();
+                    startAutoScan();
                 },
-                { enableHighAccuracy: true, timeout: 5000, maximumAge: 60000 }
+                { enableHighAccuracy: true, timeout: 5000 }
             );
         }
 
@@ -363,92 +401,6 @@
             }
         }
 
-        // ---------- Radar Animation ----------
-        const canvas = document.getElementById('radarCanvas');
-        const ctx = canvas.getContext('2d');
-        let animationId = null;
-        let scanAngle = 0;
-        let radarDots = [];
-        let detectionActive = false;
-
-        function generateDots() {
-            radarDots = [];
-            for (let i = 0; i < 8; i++) {
-                const angle = Math.random() * Math.PI * 2;
-                const distance = 20 + Math.random() * 60;
-                radarDots.push({ angle, distance, opacity: Math.random() * 0.8 + 0.2 });
-            }
-        }
-
-        function drawRadar() {
-            const w = canvas.width;
-            const h = canvas.height;
-            const cx = w / 2;
-            const cy = h / 2;
-            const radius = w / 2 - 6;
-
-            ctx.clearRect(0, 0, w, h);
-            
-            for (let i = 3; i >= 1; i--) {
-                ctx.beginPath();
-                ctx.arc(cx, cy, radius * (i / 3), 0, 2 * Math.PI);
-                ctx.strokeStyle = `rgba(77, 168, 218, ${0.15 * i})`;
-                ctx.stroke();
-            }
-            ctx.beginPath();
-            ctx.moveTo(cx, cy - radius); ctx.lineTo(cx, cy + radius);
-            ctx.moveTo(cx - radius, cy); ctx.lineTo(cx + radius, cy);
-            ctx.strokeStyle = 'rgba(77, 168, 218, 0.25)';
-            ctx.stroke();
-
-            radarDots.forEach(dot => {
-                const x = cx + Math.cos(dot.angle) * dot.distance;
-                const y = cy + Math.sin(dot.angle) * dot.distance;
-                let beamAngle = scanAngle % (Math.PI * 2);
-                let dotAngle = dot.angle % (Math.PI * 2);
-                let diff = Math.abs(beamAngle - dotAngle);
-                if (diff > Math.PI) diff = Math.PI * 2 - diff;
-                const hit = diff < 0.15;
-                if (hit) {
-                    ctx.beginPath();
-                    ctx.arc(x, y, 3, 0, 2 * Math.PI);
-                    ctx.fillStyle = detectionActive ? '#f87171' : '#4da8da';
-                    ctx.shadowBlur = 12;
-                    ctx.shadowColor = detectionActive ? '#f87171' : '#4da8da';
-                    ctx.fill();
-                    ctx.shadowBlur = 0;
-                } else {
-                    ctx.beginPath();
-                    ctx.arc(x, y, 1.5, 0, 2 * Math.PI);
-                    ctx.fillStyle = `rgba(148, 163, 184, ${dot.opacity})`;
-                    ctx.fill();
-                }
-            });
-
-            ctx.save();
-            ctx.translate(cx, cy);
-            ctx.rotate(scanAngle);
-            const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, radius);
-            gradient.addColorStop(0, 'rgba(77, 168, 218, 0.4)');
-            gradient.addColorStop(0.6, 'rgba(77, 168, 218, 0.1)');
-            gradient.addColorStop(1, 'rgba(77, 168, 218, 0)');
-            ctx.beginPath();
-            ctx.moveTo(0, 0);
-            ctx.arc(0, 0, radius, -0.1, 0.1);
-            ctx.closePath();
-            ctx.fillStyle = gradient;
-            ctx.fill();
-            ctx.restore();
-
-            scanAngle += 0.03;
-            animationId = requestAnimationFrame(drawRadar);
-        }
-
-        function startRadar() {
-            generateDots();
-            drawRadar();
-        }
-
         // ---------- Auto Detection Logic ----------
         const scanStatusEl = document.getElementById('scanStatus');
         const scanSubstatusEl = document.getElementById('scanSubstatus');
@@ -457,23 +409,49 @@
         let autoScanInterval = null;
 
         function startAutoScan() {
-            scanStatusEl.textContent = 'Scanning...';
-            scanSubstatusEl.textContent = 'Continuous RF monitoring';
-            detectionActive = false;
-            setTimeout(runDetection, 2000);
-            autoScanInterval = setInterval(runDetection, 15000);
+            if (scanStatusEl) scanStatusEl.textContent = 'Scanning...';
+            if (scanSubstatusEl) scanSubstatusEl.textContent = 'Continuous RF monitoring';
+            // initial detection after 3s
+            setTimeout(runDetection, 3000);
+            // repeat every 12-15s
+            autoScanInterval = setInterval(runDetection, 14000);
         }
 
         async function runDetection() {
-            if (window.detectionInProgress) return;
+            if (window.detectionInProgress || !map) return;
             window.detectionInProgress = true;
 
             const protocols = ['wifi', 'lora', 'dji'];
             const protocol = protocols[Math.floor(Math.random() * protocols.length)];
             
-            scanStatusEl.textContent = 'Analyzing signal...';
-            scanSubstatusEl.textContent = 'Target acquired, classifying';
-            
+            if (scanStatusEl) scanStatusEl.textContent = 'Analyzing signal...';
+            if (scanSubstatusEl) scanSubstatusEl.textContent = 'Target acquired, classifying';
+
+            // Place a threat marker on the map at a random offset from user
+            const userLatLng = userMarker ? userMarker.getLatLng() : map.getCenter();
+            const offsetLat = (Math.random() - 0.5) * 0.02;
+            const offsetLng = (Math.random() - 0.5) * 0.02;
+            const threatLat = userLatLng.lat + offsetLat;
+            const threatLng = userLatLng.lng + offsetLng;
+
+            const threatIcon = L.divIcon({
+                className: 'threat-icon',
+                html: '<i class="fas fa-fighter-jet" style="color:#f87171; font-size:20px; filter: drop-shadow(0 0 5px red);"></i>',
+                iconSize: [24, 24],
+                iconAnchor: [12, 12]
+            });
+            const threatMarker = L.marker([threatLat, threatLng], { icon: threatIcon }).addTo(map);
+            threatMarkers.push(threatMarker);
+
+            // Draw a line from user to threat (attack vector)
+            const attackLine = L.polyline([userLatLng, [threatLat, threatLng]], {
+                color: '#f87171',
+                weight: 1,
+                dashArray: '4, 4',
+                opacity: 0.7
+            }).addTo(map);
+            threatMarkers.push(attackLine); // treat line as part of threat markers
+
             try {
                 const user = auth.currentUser;
                 if (!user) throw new Error('Not authenticated');
@@ -495,12 +473,20 @@
 
                 const data = await response.json();
                 
-                detectionActive = true;
                 playAlertSound();
-                
-                scanStatusEl.textContent = 'THREAT NEUTRALISED';
-                scanSubstatusEl.textContent = 'Countermeasure deployed';
-                
+
+                // Neutralize threat: change marker color to green, then remove after a delay
+                setTimeout(() => {
+                    threatMarker.setIcon(L.divIcon({
+                        className: 'threat-icon',
+                        html: '<i class="fas fa-check-circle" style="color:#22c55e; font-size:20px;"></i>',
+                        iconSize: [24, 24],
+                        iconAnchor: [12, 12]
+                    }));
+                    attackLine.setStyle({ color: '#22c55e', opacity: 0.5 });
+                }, 1000);
+
+                // Show detection report
                 noDetectionEl.style.display = 'none';
                 detectionContent.style.display = 'block';
                 
@@ -520,6 +506,7 @@
                     img.style.display = 'none';
                 }
 
+                // Log to Firestore
                 if (user) {
                     db.collection('simulations').add({
                         userId: user.uid,
@@ -533,22 +520,19 @@
                     loadHistory(user.uid);
                 }
 
+                // Clean up threat visuals after 8 seconds
                 setTimeout(() => {
-                    detectionActive = false;
-                    scanStatusEl.textContent = 'Scanning...';
-                    scanSubstatusEl.textContent = 'Continuous RF monitoring';
+                    threatMarkers.forEach(m => map.removeLayer(m));
+                    threatMarkers = [];
                     noDetectionEl.style.display = 'block';
                     detectionContent.style.display = 'none';
-                }, 12000);
+                }, 8000);
 
             } catch (error) {
-                scanStatusEl.textContent = 'Scan interrupted';
-                scanSubstatusEl.textContent = 'Resuming auto‑scan';
                 console.error('Detection error:', error);
-                setTimeout(() => {
-                    scanStatusEl.textContent = 'Scanning...';
-                    scanSubstatusEl.textContent = 'Continuous RF monitoring';
-                }, 3000);
+                // Remove threat visuals on error
+                threatMarkers.forEach(m => map.removeLayer(m));
+                threatMarkers = [];
             } finally {
                 window.detectionInProgress = false;
             }
@@ -606,9 +590,6 @@
                     .catch(err => console.error('SW failed', err));
             });
         }
-
-        // Start radar immediately
-        startRadar();
     </script>
 </body>
 </html>
