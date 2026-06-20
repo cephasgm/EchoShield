@@ -297,9 +297,8 @@
         const auth = firebase.auth();
         const db = firebase.firestore();
 
-        // ---------- Proxy settings ----------
-        // All API calls go to same origin (/) and Cloudflare proxies to Render
-        const API_BASE = '';
+        // ---------- API Base (direct Render URL) ----------
+        const API_BASE = 'https://echoshield-api-4x6z.onrender.com';
 
         // ---------- Authentication Check ----------
         auth.onAuthStateChanged(async (user) => {
@@ -332,7 +331,7 @@
                 if (!user) throw new Error('Not authenticated');
                 const idToken = await user.getIdToken();
 
-                // Call same-origin API (proxied to Render)
+                // Call backend API directly (cross-origin, but CORS is now allowed)
                 const response = await fetch(`${API_BASE}/api/simulate`, {
                     method: 'POST',
                     headers: {
@@ -380,10 +379,10 @@
             document.getElementById('jamMod').textContent = jam.modulation.replace('_', ' ');
             document.getElementById('jamPower').textContent = jam.power_dbm + ' dBm';
 
-            // Spectrogram image (now proxied same-origin)
+            // Spectrogram image (direct URL from Render)
             const img = document.getElementById('spectrogramImg');
             if (data.spectrogram_url) {
-                img.src = data.spectrogram_url;   // relative path, e.g. /api/spectrogram/placeholder.png
+                img.src = `https://echoshield-api-4x6z.onrender.com${data.spectrogram_url}`;
                 img.style.display = 'block';
             } else {
                 img.style.display = 'none';
