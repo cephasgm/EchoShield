@@ -52,11 +52,7 @@
         }
         .logo i { color: #4da8da; font-size: 1.6rem; }
         .logo span { color: #4da8da; }
-        .user-area {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
+        .user-area { display: flex; align-items: center; gap: 1rem; }
         .user-area span { color: #cbd5e1; font-size: 0.95rem; }
         .btn {
             padding: 0.55rem 1.4rem;
@@ -78,6 +74,12 @@
             color: #0b0f17;
         }
         .btn-primary:hover { background: #3c8dbc; }
+        .btn-danger {
+            background: transparent;
+            color: #f87171;
+            border: 1px solid #f87171;
+        }
+        .btn-danger:hover { background: rgba(248, 113, 113, 0.15); }
         .btn-block { width: 100%; padding: 0.8rem; font-size: 1rem; }
 
         main {
@@ -94,37 +96,69 @@
             border-radius: 12px;
             padding: 2rem;
             margin-bottom: 2rem;
+            text-align: center;
         }
         h2 { margin-bottom: 1.5rem; color: #fff; }
         h2 span { color: #4da8da; }
         h3 { color: #fff; margin-bottom: 1rem; }
 
-        .sim-row {
+        /* Scanner Area */
+        .scanner-container {
             display: flex;
-            flex-wrap: wrap;
-            gap: 1.5rem;
-            align-items: flex-end;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 1.5rem;
         }
-        .sim-row select {
-            padding: 0.7rem 1rem;
-            background: rgba(255,255,255,0.05);
-            border: 1px solid rgba(255,255,255,0.12);
-            border-radius: 6px;
-            color: #fff;
-            font-size: 0.95rem;
-            outline: none;
-            flex: 1;
-            min-width: 200px;
+        canvas { 
+            border-radius: 50%;
+            border: 2px solid rgba(77,168,218,0.3);
+            box-shadow: 0 0 30px rgba(77,168,218,0.15);
+            margin-bottom: 1rem;
         }
-        .sim-row button {
-            white-space: nowrap;
+        .scan-status {
+            font-size: 1.1rem;
+            color: #4da8da;
+            height: 2rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        .scan-substatus {
+            font-size: 0.9rem;
+            color: #94a3b8;
+            margin-bottom: 2rem;
         }
 
+        /* Protocol Selection */
+        .protocol-grid {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-top: 1rem;
+        }
+        .protocol-option {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 0.8rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: 0.2s;
+            text-align: left;
+        }
+        .protocol-option:hover, .protocol-option.active {
+            background: rgba(77,168,218,0.15);
+            border-color: #4da8da;
+        }
+        .protocol-option i { margin-right: 0.5rem; color: #4da8da; }
+        .protocol-option span { display: block; font-size: 0.8rem; color: #94a3b8; margin-top: 0.2rem; }
+
+        /* Results Grid */
         .result-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 1.5rem;
             margin-top: 1.5rem;
+            text-align: left;
         }
         .result-item {
             background: rgba(255,255,255,0.03);
@@ -149,6 +183,7 @@
             border: 1px solid rgba(255,255,255,0.1);
         }
 
+        /* History Table */
         .history-table {
             width: 100%;
             border-collapse: collapse;
@@ -202,6 +237,10 @@
             border-top: 1px solid rgba(255,255,255,0.06);
         }
         footer span { color: #4da8da; }
+
+        @media (max-width: 768px) {
+            .header-inner { flex-direction: column; gap: 0.5rem; }
+        }
     </style>
 </head>
 <body>
@@ -210,7 +249,7 @@
             <a href="index.html" class="logo"><i class="fas fa-shield-alt"></i> CephasGM<span>|EchoShield</span></a>
             <div class="user-area">
                 <span id="userEmail"></span>
-                <button class="btn btn-outline" id="logoutBtn">Logout</button>
+                <button class="btn btn-danger" id="logoutBtn">Logout</button>
             </div>
         </div>
     </header>
@@ -218,54 +257,71 @@
     <main>
         <!-- Simulation Panel -->
         <div class="card" id="simPanel">
-            <h2><span>Drone Signal</span> Simulator</h2>
+            <h2><span>Drone Defense</span> Command Center</h2>
             <div class="error-message" id="simError"></div>
-            <div class="sim-row">
-                <select id="protocolSelect">
-                    <option value="wifi">Wi‑Fi 2.4 GHz (OFDM)</option>
-                    <option value="lora">LoRa 868 MHz (Chirp)</option>
-                    <option value="dji">DJI‑Style Frequency Hopping</option>
-                </select>
-                <button class="btn btn-primary" id="runSimBtn"><i class="fas fa-play"></i> Run Simulation</button>
+            
+            <div id="scannerUI">
+                <div class="scanner-container">
+                    <canvas id="radarCanvas" width="280" height="280"></canvas>
+                    <div class="scan-status" id="scanStatus">Standby</div>
+                    <div class="scan-substatus" id="scanSubstatus">Select target signal type to begin scanning</div>
+                </div>
+
+                <p style="margin-bottom: 0.5rem; color: #94a3b8; font-size: 0.9rem;">SUSPECTED DRONE TYPE:</p>
+                <div class="protocol-grid">
+                    <div class="protocol-option active" data-protocol="wifi" onclick="selectProtocol(this, 'wifi')">
+                        <i class="fas fa-drone"></i> Consumer Drone <br><span>Standard Wi-Fi Signal</span>
+                    </div>
+                    <div class="protocol-option" data-protocol="lora" onclick="selectProtocol(this, 'lora')">
+                        <i class="fas fa-helicopter"></i> Long-Range FPV <br><span>LoRa 868 MHz Band</span>
+                    </div>
+                    <div class="protocol-option" data-protocol="dji" onclick="selectProtocol(this, 'dji')">
+                        <i class="fas fa-fighter-jet"></i> Tactical UAV <br><span>Frequency Hopping</span>
+                    </div>
+                </div>
+                <button class="btn btn-primary btn-block" id="runSimBtn" style="margin-top: 2rem;">
+                    <i class="fas fa-satellite-dish"></i> Scan & Deploy Countermeasure
+                </button>
             </div>
-            <div id="simLoading" style="display:none; margin-top:1rem;">
-                <span class="loader"></span> Processing signal & AI classification...
-            </div>
+
             <div id="simResults" style="display:none;">
-                <h3 style="margin-top:1.8rem;">Analysis Result</h3>
+                <h3 style="margin-top:1.8rem; color: #4da8da;">MISSION REPORT</h3>
                 <div class="result-grid">
                     <div class="result-item">
-                        <div class="label">Detected Protocol</div>
-                        <div class="value" id="detectedProtocol">-</div>
+                        <div class="label">Drone Identified</div>
+                        <div class="value" id="detectedDrone">-</div>
                     </div>
                     <div class="result-item">
-                        <div class="label">Confidence</div>
+                        <div class="label">Threat Confidence</div>
                         <div class="value" id="confidence">-</div>
                     </div>
                     <div class="result-item">
-                        <div class="label">Jammer Centre Freq</div>
+                        <div class="label">Countermeasure Deployed</div>
+                        <div class="value" id="jamType">-</div>
+                    </div>
+                    <div class="result-item">
+                        <div class="label">Target Frequency</div>
                         <div class="value" id="jamFreq">-</div>
                     </div>
                     <div class="result-item">
-                        <div class="label">Bandwidth</div>
+                        <div class="label">Jamming Bandwidth</div>
                         <div class="value" id="jamBW">-</div>
                     </div>
                     <div class="result-item">
-                        <div class="label">Modulation</div>
-                        <div class="value" id="jamMod">-</div>
-                    </div>
-                    <div class="result-item">
-                        <div class="label">Power (dBm)</div>
+                        <div class="label">Signal Power</div>
                         <div class="value" id="jamPower">-</div>
                     </div>
                 </div>
-                <img id="spectrogramImg" class="spec-image" alt="Spectrogram" style="display:none;">
+                <img id="spectrogramImg" class="spec-image" alt="Signal Spectrogram" style="display:none;">
+                <button class="btn btn-outline" id="resetSimBtn" style="margin-top: 1.5rem;">
+                    <i class="fas fa-redo"></i> Scan Another Target
+                </button>
             </div>
         </div>
 
         <!-- History Panel -->
         <div class="card">
-            <h2><span>Simulation</span> History</h2>
+            <h2><span>Mission</span> History</h2>
             <div id="historyContainer">
                 <p style="color:#94a3b8;">Loading history...</p>
             </div>
@@ -298,91 +354,250 @@
         const db = firebase.firestore();
 
         // ---------- API Base (direct Render URL) ----------
-        const API_BASE = '';   // same origin, routed through Pages Function
+        const API_BASE = 'https://echoshield-api-4x6z.onrender.com';
 
-        // ---------- Authentication Check ----------
+        // ---------- Auth Check ----------
         auth.onAuthStateChanged(async (user) => {
-            if (!user) {
-                window.location.href = 'signin.html';
-                return;
-            }
+            if (!user) { window.location.href = 'signin.html'; return; }
             document.getElementById('userEmail').textContent = user.email;
             loadHistory(user.uid);
         });
 
-        // Logout
         document.getElementById('logoutBtn').addEventListener('click', () => {
             auth.signOut().then(() => window.location.href = 'signin.html');
         });
 
-        // ---------- Simulation ----------
+        // ---------- Radar Animation ----------
+        const canvas = document.getElementById('radarCanvas');
+        const ctx = canvas.getContext('2d');
+        let selectedProtocol = 'wifi';
+        let animationId = null;
+        let scanAngle = 0;
+        let radarDots = [];
+        let scanActive = false;
+
+        function generateDots() {
+            radarDots = [];
+            for (let i = 0; i < 12; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const distance = 30 + Math.random() * 100;
+                radarDots.push({ angle, distance, opacity: Math.random() * 0.8 + 0.2 });
+            }
+        }
+
+        function drawRadar() {
+            const w = canvas.width;
+            const h = canvas.height;
+            const cx = w / 2;
+            const cy = h / 2;
+            const radius = w / 2 - 10;
+
+            ctx.clearRect(0, 0, w, h);
+            
+            // Background circles
+            for (let i = 3; i >= 1; i--) {
+                ctx.beginPath();
+                ctx.arc(cx, cy, radius * (i / 3), 0, 2 * Math.PI);
+                ctx.strokeStyle = `rgba(77, 168, 218, ${0.1 * i})`;
+                ctx.stroke();
+            }
+            // Crosshairs
+            ctx.beginPath();
+            ctx.moveTo(cx, cy - radius); ctx.lineTo(cx, cy + radius);
+            ctx.moveTo(cx - radius, cy); ctx.lineTo(cx + radius, cy);
+            ctx.strokeStyle = 'rgba(77, 168, 218, 0.2)';
+            ctx.stroke();
+
+            // Dots (targets)
+            radarDots.forEach(dot => {
+                const x = cx + Math.cos(dot.angle) * dot.distance;
+                const y = cy + Math.sin(dot.angle) * dot.distance;
+                
+                // Check if beam is hitting the dot
+                let beamAngle = scanAngle % (Math.PI * 2);
+                let dotAngle = dot.angle % (Math.PI * 2);
+                let diff = Math.abs(beamAngle - dotAngle);
+                if (diff > Math.PI) diff = Math.PI * 2 - diff;
+                
+                const hit = diff < 0.15;
+                if (hit) {
+                    ctx.beginPath();
+                    ctx.arc(x, y, 4, 0, 2 * Math.PI);
+                    ctx.fillStyle = '#4da8da';
+                    ctx.shadowBlur = 15;
+                    ctx.shadowColor = '#4da8da';
+                    ctx.fill();
+                    ctx.shadowBlur = 0;
+                } else {
+                    ctx.beginPath();
+                    ctx.arc(x, y, 2, 0, 2 * Math.PI);
+                    ctx.fillStyle = `rgba(148, 163, 184, ${dot.opacity})`;
+                    ctx.fill();
+                }
+            });
+
+            // Scanning beam
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.rotate(scanAngle);
+            const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, radius);
+            gradient.addColorStop(0, 'rgba(77, 168, 218, 0.4)');
+            gradient.addColorStop(0.6, 'rgba(77, 168, 218, 0.1)');
+            gradient.addColorStop(1, 'rgba(77, 168, 218, 0)');
+            
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.arc(0, 0, radius, -0.1, 0.1);
+            ctx.closePath();
+            ctx.fillStyle = gradient;
+            ctx.fill();
+            ctx.restore();
+
+            scanAngle += 0.04;
+            if (scanActive) {
+                animationId = requestAnimationFrame(drawRadar);
+            }
+        }
+
+        function startRadarScan() {
+            scanActive = true;
+            scanAngle = 0;
+            generateDots();
+            drawRadar();
+        }
+
+        function stopRadarScan() {
+            scanActive = false;
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+                animationId = null;
+            }
+        }
+
+        // ---------- Protocol Selection ----------
+        function selectProtocol(element, protocol) {
+            document.querySelectorAll('.protocol-option').forEach(el => el.classList.remove('active'));
+            element.classList.add('active');
+            selectedProtocol = protocol;
+        }
+
+        // ---------- Simulation Flow ----------
+        const scanStatus = document.getElementById('scanStatus');
+        const scanSubstatus = document.getElementById('scanSubstatus');
         const simError = document.getElementById('simError');
-        const simLoading = document.getElementById('simLoading');
         const simResults = document.getElementById('simResults');
+        const scannerUI = document.getElementById('scannerUI');
 
         document.getElementById('runSimBtn').addEventListener('click', async () => {
-            const protocol = document.getElementById('protocolSelect').value;
             simError.style.display = 'none';
-            simLoading.style.display = 'block';
             simResults.style.display = 'none';
+            scannerUI.style.display = 'block';
+            
+            // Phase 1: Radar Scan
+            startRadarScan();
+            scanStatus.textContent = 'Scanning Airspace...';
+            scanSubstatus.textContent = 'Analyzing radio frequency environment';
+            document.getElementById('runSimBtn').disabled = true;
 
-            try {
-                const user = auth.currentUser;
-                if (!user) throw new Error('Not authenticated');
-                const idToken = await user.getIdToken();
+            setTimeout(async () => {
+                // Phase 2: Detection
+                scanStatus.textContent = 'Signal Detected!';
+                scanSubstatus.textContent = 'Classifying drone protocol signature';
 
-                // Call backend API directly (cross-origin, but CORS is now allowed)
-                const response = await fetch(`${API_BASE}/api/simulate`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${idToken}`
-                    },
-                    body: JSON.stringify({ protocol })
-                });
+                try {
+                    const user = auth.currentUser;
+                    if (!user) throw new Error('Not authenticated');
+                    const idToken = await user.getIdToken();
 
-                if (!response.ok) {
-                    const errData = await response.json();
-                    throw new Error(errData.error || 'Simulation failed');
+                    const response = await fetch(`${API_BASE}/api/simulate`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${idToken}`
+                        },
+                        body: JSON.stringify({ protocol: selectedProtocol })
+                    });
+
+                    if (!response.ok) {
+                        const errData = await response.json();
+                        throw new Error(errData.error || 'Threat analysis failed');
+                    }
+
+                    const data = await response.json();
+                    
+                    // Phase 3: Countermeasure
+                    stopRadarScan();
+                    scanStatus.textContent = 'Countermeasure Deployed!';
+                    scanSubstatus.textContent = 'Jamming signal active. Target neutralized.';
+                    
+                    setTimeout(() => {
+                        scannerUI.style.display = 'none';
+                        displayResults(data);
+                        // Log to Firestore
+                        if (user) {
+                            db.collection('simulations').add({
+                                userId: user.uid,
+                                userEmail: user.email,
+                                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                                protocolRequested: selectedProtocol,
+                                detectedProtocol: data.detected_protocol,
+                                confidence: data.confidence,
+                                jammingParams: data.jamming
+                            });
+                            loadHistory(user.uid);
+                        }
+                    }, 1500);
+
+                } catch (error) {
+                    stopRadarScan();
+                    simError.textContent = error.message;
+                    simError.style.display = 'block';
+                    scanStatus.textContent = 'Scan Failed';
+                    scanSubstatus.textContent = 'Please try again';
+                    document.getElementById('runSimBtn').disabled = false;
                 }
-
-                const data = await response.json();
-                displayResults(data);
-
-                // Log to Firestore (client-side for immediate history)
-                await db.collection('simulations').add({
-                    userId: user.uid,
-                    userEmail: user.email,
-                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                    protocolRequested: protocol,
-                    detectedProtocol: data.detected_protocol,
-                    confidence: data.confidence,
-                    jammingParams: data.jamming
-                });
-
-                loadHistory(user.uid);
-
-            } catch (error) {
-                simError.textContent = error.message;
-                simError.style.display = 'block';
-            } finally {
-                simLoading.style.display = 'none';
-            }
+            }, 3000);
         });
 
+        document.getElementById('resetSimBtn').addEventListener('click', () => {
+            simResults.style.display = 'none';
+            scannerUI.style.display = 'block';
+            scanStatus.textContent = 'Standby';
+            scanSubstatus.textContent = 'Select target signal type to begin scanning';
+            document.getElementById('runSimBtn').disabled = false;
+            generateDots();
+        });
+
+        function mapDroneName(protocol) {
+            const names = {
+                'wifi': 'Consumer Drone (Wi-Fi)',
+                'lora': 'Long-Range FPV (LoRa)',
+                'dji': 'Tactical UAV (DJI)'
+            };
+            return names[protocol] || protocol.toUpperCase();
+        }
+
+        function mapJamName(modulation) {
+            const names = {
+                'wideband_noise': 'Wideband Noise Barrage',
+                'chirp_jammer': 'Chirp Disruption Pulse',
+                'sweeping_tone': 'Frequency Sweeping Jammer'
+            };
+            return names[modulation] || modulation.replace('_', ' ');
+        }
+
         function displayResults(data) {
-            document.getElementById('detectedProtocol').textContent = data.detected_protocol.toUpperCase();
-            document.getElementById('confidence').textContent = (data.confidence * 100).toFixed(1) + '%';
+            document.getElementById('detectedDrone').textContent = mapDroneName(data.detected_protocol);
+            document.getElementById('confidence').textContent = (data.confidence * 100).toFixed(1) + '% Match';
             const jam = data.jamming;
+            document.getElementById('jamType').textContent = mapJamName(jam.modulation);
             document.getElementById('jamFreq').textContent = (jam.center_freq_hz / 1e6).toFixed(2) + ' MHz';
             document.getElementById('jamBW').textContent = (jam.bandwidth_hz / 1e3).toFixed(1) + ' kHz';
-            document.getElementById('jamMod').textContent = jam.modulation.replace('_', ' ');
             document.getElementById('jamPower').textContent = jam.power_dbm + ' dBm';
 
-            // Spectrogram image (direct URL from Render)
             const img = document.getElementById('spectrogramImg');
             if (data.spectrogram_url) {
-                img.src = data.spectrogram_url;   // relative URL, also proxied
+                img.src = API_BASE + data.spectrogram_url;
                 img.style.display = 'block';
             } else {
                 img.style.display = 'none';
@@ -391,7 +606,7 @@
             simResults.style.display = 'block';
         }
 
-        // ---------- History from Firestore ----------
+        // ---------- History ----------
         async function loadHistory(uid) {
             const container = document.getElementById('historyContainer');
             try {
@@ -402,7 +617,7 @@
                     .get();
 
                 if (snapshot.empty) {
-                    container.innerHTML = '<p style="color:#94a3b8;">No simulations run yet.</p>';
+                    container.innerHTML = '<p style="color:#94a3b8;">No previous missions found.</p>';
                     return;
                 }
 
@@ -410,11 +625,11 @@
                     <table class="history-table">
                         <thead>
                             <tr>
-                                <th>Time</th>
-                                <th>Requested</th>
-                                <th>Detected</th>
+                                <th>Timestamp</th>
+                                <th>Target Type</th>
+                                <th>Detected As</th>
                                 <th>Confidence</th>
-                                <th>Jamming Type</th>
+                                <th>Countermeasure</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -425,10 +640,10 @@
                     html += `
                         <tr>
                             <td>${time}</td>
-                            <td>${d.protocolRequested.toUpperCase()}</td>
-                            <td>${d.detectedProtocol.toUpperCase()}</td>
+                            <td>${mapDroneName(d.protocolRequested)}</td>
+                            <td>${mapDroneName(d.detectedProtocol)}</td>
                             <td>${(d.confidence * 100).toFixed(0)}%</td>
-                            <td>${d.jammingParams.modulation.replace('_', ' ')}</td>
+                            <td>${mapJamName(d.jammingParams.modulation)}</td>
                         </tr>
                     `;
                 });
@@ -439,7 +654,7 @@
             }
         }
 
-        // ---------- PWA Service Worker ----------
+        // ---------- PWA ----------
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('/sw.js')
@@ -447,6 +662,10 @@
                     .catch(err => console.error('SW failed', err));
             });
         }
+
+        // Initialize radar dots on load
+        generateDots();
+        drawRadar();
     </script>
 </body>
 </html>

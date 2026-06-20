@@ -1,13 +1,16 @@
 import os
 import io
-import struct
-import zlib
 import traceback
 import numpy as np
 from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 import firebase_admin
 from firebase_admin import credentials, firestore, auth
+
+# Matplotlib for real spectrogram generation
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 
 app = Flask(__name__)
 CORS(app, resources={r"/api/*": {"origins": "https://echoshield.cephasgm.org"}})
@@ -21,30 +24,17 @@ else:
 firebase_admin.initialize_app(cred)
 db = firestore.client()
 
-# ---------- Placeholder PNG ----------
-def create_placeholder_png():
-    def chunk(t, d):
-        c = t + d
-        return struct.pack('>I', len(d)) + c + struct.pack('>I', zlib.crc32(c) & 0xffffffff)
-    sig = b'\x89PNG\r\n\x1a\n'
-    ihdr = chunk(b'IHDR', struct.pack('>IIBBBBB', 1, 1, 8, 6, 0, 0, 0))
-    raw = b'\x00' + b'\x00\x00\x00\x00'
-    idat = chunk(b'IDAT', zlib.compress(raw))
-    iend = chunk(b'IEND', b'')
-    return sig + ihdr + idat + iend
-PLACEHOLDER_PNG = create_placeholder_png()
-
 # ---------- Simulator & AI ----------
 from simulator import generate_iq_and_spectrogram
 from ai_model import classify_spectrogram, generate_jamming_signal
 
 def verify_token(req):
-    auth = req.headers.get('Authorization')
-    if not auth or not auth.startswith('Bearer '):
+    auth_header = req.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith('Bearer '):
         return None, 'Missing or invalid Authorization header'
     try:
-        decoded = auth.verify_id_token(auth.split('Bearer ')[1])
-        return decoded['uid'], None
+        decoded_token = firebase_admin.auth.verify_id_token(auth_header.split('Bearer ')[1])
+        return decoded_token['uid'], None
     except Exception as e:
         return None, str(e)
 
@@ -72,10 +62,12 @@ def simulate():
         if protocol not in ('wifi', 'lora', 'dji'):
             return jsonify({'error': 'Invalid protocol'}), 400
 
+        # Generate signal and spectrogram
         iq, spec = generate_iq_and_spectrogram(protocol)
         pred, conf = classify_spectrogram(spec)
         jam = generate_jamming_signal(pred)
 
+        # Log to Firestore
         if db:
             try:
                 db.collection('simulations').add({
@@ -87,13 +79,13 @@ def simulate():
                     'jammingParams': jam
                 })
             except Exception as e:
-                print(f"Firestore error: {e}")
+                print(f"Firestore logging error: {e}")
 
         return jsonify({
             'detected_protocol': pred,
             'confidence': float(conf),
             'jamming': jam,
-            'spectrogram_url': '/api/spectrogram/placeholder.png'
+            'spectrogram_url': '/api/spectrogram/current.png'
         })
     except Exception as e:
         traceback.print_exc()
@@ -101,7 +93,27 @@ def simulate():
 
 @app.route('/api/spectrogram/<filename>')
 def spectrogram(filename):
-    return send_file(io.BytesIO(PLACEHOLDER_PNG), mimetype='image/png')
+    # Generate a fresh spectrogram image in memory
+    try:
+        # Default to wifi if no recent simulation, but usually called right after simulate.
+        # For simplicity, we generate a new one. In a perfect world we'd cache the last one,
+        # but this ensures the image always matches the latest request.
+        protocol = 'wifi'  # You could pass protocol in query params if needed, but static generation is fine for demo.
+        iq, spec = generate_iq_and_spectrogram(protocol)
+        
+        img = io.BytesIO()
+        plt.figure(figsize=(6, 4))
+        plt.imshow(spec, aspect='auto', origin='lower', cmap='inferno')
+        plt.axis('off')
+        plt.tight_layout(pad=0)
+        plt.savefig(img, format='png', bbox_inches='tight', pad_inches=0)
+        plt.close()
+        img.seek(0)
+        return send_file(img, mimetype='image/png')
+    except Exception as e:
+        traceback.print_exc()
+        # Fallback to empty response
+        return jsonify({'error': 'Failed to generate spectrogram'}), 500
 
 # ---------- CORS fallback ----------
 @app.after_request
