@@ -1,2 +1,1 @@
-# Cloudflare Pages redirects – proxy API calls to backend
-/api/* https://api.cephasgm.org/api/:splat 200
+/api/*  https://echoshield-api-4x6z.onrender.com/api/:splat  200

@@ -297,15 +297,17 @@
         const auth = firebase.auth();
         const db = firebase.firestore();
 
+        // ---------- Proxy settings ----------
+        // All API calls go to same origin (/) and Cloudflare proxies to Render
+        const API_BASE = '';
+
         // ---------- Authentication Check ----------
         auth.onAuthStateChanged(async (user) => {
             if (!user) {
                 window.location.href = 'signin.html';
                 return;
             }
-            // Display user email
             document.getElementById('userEmail').textContent = user.email;
-            // Fetch history
             loadHistory(user.uid);
         });
 
@@ -330,8 +332,7 @@
                 if (!user) throw new Error('Not authenticated');
                 const idToken = await user.getIdToken();
 
-                // Call backend simulation API (adjust URL to your deployed backend)
-                const API_BASE = 'https://echoshield-api-4x6z.onrender.com';
+                // Call same-origin API (proxied to Render)
                 const response = await fetch(`${API_BASE}/api/simulate`, {
                     method: 'POST',
                     headers: {
@@ -349,7 +350,7 @@
                 const data = await response.json();
                 displayResults(data);
 
-                // Log simulation to Firestore (client-side for immediate user history)
+                // Log to Firestore (client-side for immediate history)
                 await db.collection('simulations').add({
                     userId: user.uid,
                     userEmail: user.email,
@@ -360,7 +361,6 @@
                     jammingParams: data.jamming
                 });
 
-                // Refresh history
                 loadHistory(user.uid);
 
             } catch (error) {
@@ -380,10 +380,10 @@
             document.getElementById('jamMod').textContent = jam.modulation.replace('_', ' ');
             document.getElementById('jamPower').textContent = jam.power_dbm + ' dBm';
 
-            // Spectrogram image
+            // Spectrogram image (now proxied same-origin)
             const img = document.getElementById('spectrogramImg');
             if (data.spectrogram_url) {
-                img.src = `https://api.cephasgm.org${data.spectrogram_url}`;  // backend serves the image
+                img.src = data.spectrogram_url;   // relative path, e.g. /api/spectrogram/placeholder.png
                 img.style.display = 'block';
             } else {
                 img.style.display = 'none';
