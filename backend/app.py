@@ -1,5 +1,6 @@
 import os
 import io
+import json
 import base64
 import numpy as np
 from flask import Flask, request, jsonify, send_file
@@ -16,8 +17,12 @@ app = Flask(__name__)
 CORS(app)
 
 # ---------- Firebase Admin Initialisation ----------
-# Provide your service account key file path
-cred = credentials.Certificate('firebase-service-account.json')
+# Use environment variable (for production) or local file (for development)
+firebase_creds = os.environ.get('FIREBASE_SERVICE_ACCOUNT')
+if firebase_creds:
+    cred = credentials.Certificate(json.loads(firebase_creds))
+else:
+    cred = credentials.Certificate('firebase-service-account.json')
 firebase_admin.initialize_app(cred)
 db = firestore.client()
 
