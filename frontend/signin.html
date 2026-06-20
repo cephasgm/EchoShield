@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign In – EchoShield | CephasGM</title>
+    <meta name="theme-color" content="#0a121f">
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; height: 100%; }
+        body {
+            font-family: 'Inter', 'Segoe UI', sans-serif;
+            background: #0b0f17;
+            color: #e0e6f0;
+            line-height: 1.5;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: url('https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?q=80&w=2070&auto=format&fit=crop') no-repeat center center/cover;
+            filter: brightness(0.25);
+            z-index: -1;
+        }
+        a { text-decoration: none; color: #4da8da; }
+        header {
+            background: rgba(8, 12, 24, 0.8);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            padding: 0.8rem 2rem;
+        }
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #fff;
+        }
+        .logo i { color: #4da8da; font-size: 1.6rem; }
+        .logo span { color: #4da8da; }
+        .btn {
+            padding: 0.55rem 1.6rem;
+            border-radius: 6px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: 0.3s;
+            font-size: 0.9rem;
+        }
+        .btn-outline {
+            border: 1px solid #4da8da;
+            color: #4da8da;
+            background: transparent;
+        }
+        .btn-outline:hover { background: rgba(77,168,218,0.1); }
+        .btn-primary {
+            background: #4da8da;
+            color: #0b0f17;
+        }
+        .btn-primary:hover { background: #3c8dbc; }
+
+        main {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+        .auth-card {
+            background: rgba(18, 25, 40, 0.85);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 12px;
+            padding: 2.5rem 2rem;
+            width: 100%;
+            max-width: 420px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+        }
+        .auth-card h2 {
+            text-align: center;
+            margin-bottom: 0.3rem;
+            color: #fff;
+        }
+        .auth-card h2 span { color: #4da8da; }
+        .auth-card .subtitle {
+            text-align: center;
+            color: #94a3b8;
+            margin-bottom: 2rem;
+        }
+        .input-group {
+            margin-bottom: 1.2rem;
+            position: relative;
+        }
+        .input-group i {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #4da8da;
+            font-size: 1rem;
+        }
+        .input-group input {
+            width: 100%;
+            padding: 0.75rem 1rem 0.75rem 2.6rem;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 6px;
+            color: #fff;
+            font-size: 0.95rem;
+            outline: none;
+            transition: border 0.2s;
+        }
+        .input-group input:focus {
+            border-color: #4da8da;
+        }
+        .error-msg {
+            color: #f87171;
+            font-size: 0.85rem;
+            margin-top: 0.3rem;
+            display: none;
+        }
+        .forgot {
+            text-align: right;
+            margin-bottom: 1.5rem;
+        }
+        .forgot a { font-size: 0.85rem; }
+        .btn-block {
+            width: 100%;
+            padding: 0.8rem;
+            font-size: 1rem;
+        }
+        .divider {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin: 1.5rem 0;
+            color: #64748b;
+        }
+        .divider::before, .divider::after {
+            content: "";
+            flex: 1;
+            height: 1px;
+            background: rgba(255,255,255,0.1);
+        }
+        .google-btn {
+            width: 100%;
+            background: #fff;
+            color: #1e293b;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+        .google-btn:hover { background: #e2e8f0; }
+        .auth-link {
+            text-align: center;
+            margin-top: 1.5rem;
+            color: #94a3b8;
+        }
+        footer {
+            text-align: center;
+            padding: 1.5rem;
+            background: rgba(8, 12, 24, 0.9);
+            backdrop-filter: blur(8px);
+            color: #94a3b8;
+            font-size: 0.85rem;
+            border-top: 1px solid rgba(255,255,255,0.06);
+        }
+        footer span { color: #4da8da; }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="nav-container">
+            <a href="index.html" class="logo"><i class="fas fa-shield-alt"></i> CephasGM<span>|EchoShield</span></a>
+            <a href="index.html" class="btn btn-outline">← Home</a>
+        </div>
+    </header>
+
+    <main>
+        <div class="auth-card">
+            <h2>Welcome <span>Back</span></h2>
+            <p class="subtitle">Sign in to your EchoShield account</p>
+
+            <div id="error" class="error-msg" style="margin-bottom:1rem;"></div>
+
+            <div class="input-group">
+                <i class="fas fa-envelope"></i>
+                <input type="email" id="email" placeholder="Email address" autocomplete="email" required>
+            </div>
+            <div class="input-group">
+                <i class="fas fa-lock"></i>
+                <input type="password" id="password" placeholder="Password" autocomplete="current-password" required>
+            </div>
+            <div class="forgot">
+                <a href="#" id="forgotPassword">Forgot password?</a>
+            </div>
+            <button class="btn btn-primary btn-block" id="signInBtn">Sign In</button>
+
+            <div class="divider">or</div>
+            <button class="btn google-btn" id="googleSignInBtn">
+                <i class="fab fa-google"></i> Continue with Google
+            </button>
+
+            <p class="auth-link">Don't have an account? <a href="signup.html">Create one</a></p>
+        </div>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 Cephas GM | Innovating for Tomorrow</p>
+        <p><span>EchoShield</span> – AI‑Powered Drone Defense</p>
+    </footer>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-auth-compat.js"></script>
+    <script>
+        // Your Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCM_7S0zPDz4G2xzlevL3pwj7U0pYih-Zk",
+            authDomain: "echoshield-38f36.firebaseapp.com",
+            projectId: "echoshield-38f36",
+            storageBucket: "echoshield-38f36.firebasestorage.app",
+            messagingSenderId: "747286927373",
+            appId: "1:747286927373:web:5c4029593703bb08d6dd44",
+            measurementId: "G-KDCDBN5KGS"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+
+        // UI elements
+        const emailInput = document.getElementById('email');
+        const passwordInput = document.getElementById('password');
+        const errorDiv = document.getElementById('error');
+        const signInBtn = document.getElementById('signInBtn');
+        const googleSignInBtn = document.getElementById('googleSignInBtn');
+        const forgotPassword = document.getElementById('forgotPassword');
+
+        // Show error message
+        function showError(message) {
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+        function clearError() {
+            errorDiv.textContent = '';
+            errorDiv.style.display = 'none';
+        }
+
+        // Email/Password Sign In
+        signInBtn.addEventListener('click', async () => {
+            clearError();
+            const email = emailInput.value.trim();
+            const password = passwordInput.value;
+
+            if (!email || !password) {
+                showError('Please fill in both fields.');
+                return;
+            }
+
+            try {
+                await auth.signInWithEmailAndPassword(email, password);
+                window.location.href = 'dashboard.html';
+            } catch (error) {
+                showError(error.message);
+            }
+        });
+
+        // Google Sign In
+        googleSignInBtn.addEventListener('click', async () => {
+            clearError();
+            const provider = new firebase.auth.GoogleAuthProvider();
+            try {
+                await auth.signInWithPopup(provider);
+                window.location.href = 'dashboard.html';
+            } catch (error) {
+                if (error.code !== 'auth/popup-closed-by-user') {
+                    showError(error.message);
+                }
+            }
+        });
+
+        // Forgot Password
+        forgotPassword.addEventListener('click', async (e) => {
+            e.preventDefault();
+            const email = emailInput.value.trim();
+            if (!email) {
+                showError('Please enter your email address first.');
+                return;
+            }
+            try {
+                await auth.sendPasswordResetEmail(email);
+                alert('Password reset email sent. Check your inbox.');
+            } catch (error) {
+                showError(error.message);
+            }
+        });
+
+        // Service Worker Registration (PWA)
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(reg => console.log('SW registered'))
+                    .catch(err => console.error('SW failed', err));
+            });
+        }
+    </script>
+</body>
+</html>
