@@ -13,7 +13,7 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
-app = Flask(**name**)
+app = Flask(__name__)
 CORS(app, resources={r"/api/*": {"origins": "https://echoshield.cephasgm.org"}})
 
 # ---------- Firebase ----------
