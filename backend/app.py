@@ -32,7 +32,7 @@ except Exception as e:
     print(f"Firebase init error: {e}")
     db = None  # will cause errors later if used, but app starts
 
-SPECTRO_DIR = 'spectrograms'
+SPECTRO_DIR = '/tmp/spectrograms'
 os.makedirs(SPECTRO_DIR, exist_ok=True)
 
 def verify_token(request):
