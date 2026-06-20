@@ -1,7 +1,0 @@
-/*
-  Access-Control-Allow-Origin: *
-  X-Frame-Options: DENY
-  X-Content-Type-Options: nosniff
-  Referrer-Policy: strict-origin-when-cross-origin
-
-# Service worker must be served with the right MIME type (Cloudflare does this by default)
