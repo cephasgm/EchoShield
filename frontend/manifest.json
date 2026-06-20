@@ -1,0 +1,24 @@
+{
+  "name": "EchoShield – AI Anti-Drone Defense",
+  "short_name": "EchoShield",
+  "description": "AI-powered drone RF simulator and jamming engine",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "background_color": "#0b0f17",
+  "theme_color": "#0a121f",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
