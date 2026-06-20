@@ -2,38 +2,54 @@ import os
 import io
 import base64
 import json
-import traceback
+import struct
+import zlib
 import numpy as np
 from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 import firebase_admin
 from firebase_admin import credentials, firestore, auth
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-
-from simulator import generate_iq_and_spectrogram
-from ai_model import classify_spectrogram, generate_jamming_signal
 
 app = Flask(__name__)
-CORS(app, resources={r"/api/*": {"origins": "https://echoshield.cephasgm.org"}}, supports_credentials=True)
+CORS(app, resources={r"/api/*": {"origins": "https://echoshield.cephasgm.org"}})
 
-# ---------- Firebase Admin Initialisation ----------
+# ---------- Firebase Initialisation ----------
 secret_path = '/etc/secrets/firebase-service-account.json'
-try:
-    if os.path.exists(secret_path):
-        cred = credentials.Certificate(secret_path)
-    else:
-        cred = credentials.Certificate('firebase-service-account.json')
-    firebase_admin.initialize_app(cred)
-    db = firestore.client()
-    print("Firebase initialized successfully")
-except Exception as e:
-    print(f"Firebase init error: {e}")
-    db = None  # will cause errors later if used, but app starts
+if os.path.exists(secret_path):
+    cred = credentials.Certificate(secret_path)
+else:
+    cred = credentials.Certificate('firebase-service-account.json')
+firebase_admin.initialize_app(cred)
+db = firestore.client()
 
-SPECTRO_DIR = '/tmp/spectrograms'
-os.makedirs(SPECTRO_DIR, exist_ok=True)
+# ---------- Simple spectrogram placeholder (pure Python PNG) ----------
+def create_placeholder_png():
+    """Generate a minimal 1x1 transparent PNG as bytes, using pure Python."""
+    def chunk(chunk_type, data):
+        c = chunk_type + data
+        return struct.pack('>I', len(data)) + c + struct.pack('>I', zlib.crc32(c) & 0xffffffff)
+
+    # PNG signature
+    signature = b'\x89PNG\r\n\x1a\n'
+    # IHDR: 1x1 pixel, grayscale, no alpha (or RGBA?) – simplest: grayscale, 1 bit? We'll do RGBA for transparency.
+    # Use color type 6 (RGBA) for transparency, but we need a palette? Simpler: grayscale with alpha = 0.
+    # Actually, we can produce a 1x1 RGBA PNG with pure Python.
+    ihdr_data = struct.pack('>IIBBBBB', 1, 1, 8, 6, 0, 0, 0)  # 1x1, 8-bit, RGBA
+    ihdr = chunk(b'IHDR', ihdr_data)
+    # IDAT: raw pixel data (filter byte + scanline)
+    raw = b'\x00'  # filter none
+    pixel = b'\x00\x00\x00\x00'  # RGBA transparent black
+    raw += pixel
+    compressed = zlib.compress(raw)
+    idat = chunk(b'IDAT', compressed)
+    iend = chunk(b'IEND', b'')
+    return signature + ihdr + idat + iend
+
+PLACEHOLDER_PNG = create_placeholder_png()
+
+# ---------- Signal simulation and AI (from your existing modules) ----------
+from simulator import generate_iq_and_spectrogram
+from ai_model import classify_spectrogram, generate_jamming_signal
 
 def verify_token(request):
     auth_header = request.headers.get('Authorization')
@@ -48,73 +64,73 @@ def verify_token(request):
 
 @app.route('/api/simulate', methods=['POST'])
 def simulate():
+    # 1. Auth
+    uid, error = verify_token(request)
+    if error:
+        return jsonify({'error': error}), 401
+
+    # 2. Parse input
+    data = request.get_json(silent=True)
+    if not data or 'protocol' not in data:
+        return jsonify({'error': 'Missing protocol in request body'}), 400
+
+    protocol = data['protocol'].lower()
+    if protocol not in ['wifi', 'lora', 'dji']:
+        return jsonify({'error': 'Invalid protocol. Choose wifi, lora, or dji.'}), 400
+
+    # 3. Simulate
+    iq, spectrogram = generate_iq_and_spectrogram(protocol)
+
+    # 4. AI classification
+    predicted_class, confidence = classify_spectrogram(spectrogram)
+
+    # 5. Jamming parameters
+    jamming_params = generate_jamming_signal(predicted_class)
+
+    # 6. Log to Firestore
     try:
-        uid, error = verify_token(request)
-        if error:
-            return jsonify({'error': error}), 401
-
-        data = request.get_json()
-        if not data or 'protocol' not in data:
-            return jsonify({'error': 'Missing protocol in request body'}), 400
-
-        protocol = data['protocol'].lower()
-        if protocol not in ['wifi', 'lora', 'dji']:
-            return jsonify({'error': 'Invalid protocol. Choose wifi, lora, or dji.'}), 400
-
-        # Generate IQ and spectrogram
-        iq, spectrogram = generate_iq_and_spectrogram(protocol)
-
-        # AI classification
-        predicted_class, confidence = classify_spectrogram(spectrogram)
-
-        # Jamming signal generation
-        jamming_params = generate_jamming_signal(predicted_class)
-
-        # Save spectrogram as PNG
-        run_id = base64.urlsafe_b64encode(os.urandom(8)).decode('utf-8')
-        img_path = os.path.join(SPECTRO_DIR, f'{run_id}.png')
-        plt.figure(figsize=(6,4))
-        plt.imshow(spectrogram, aspect='auto', origin='lower', cmap='inferno')
-        plt.axis('off')
-        plt.tight_layout(pad=0)
-        plt.savefig(img_path, bbox_inches='tight', pad_inches=0)
-        plt.close()
-
-        spectrogram_url = f'/api/spectrogram/{run_id}.png'
-
-        # Log to Firestore (if available)
-        if db:
-            db.collection('simulations').add({
-                'userId': uid,
-                'timestamp': firestore.SERVER_TIMESTAMP,
-                'protocolRequested': protocol,
-                'detectedProtocol': predicted_class,
-                'confidence': float(confidence),
-                'jammingParams': jamming_params
-            })
-
-        return jsonify({
-            'detected_protocol': predicted_class,
+        db.collection('simulations').add({
+            'userId': uid,
+            'timestamp': firestore.SERVER_TIMESTAMP,
+            'protocolRequested': protocol,
+            'detectedProtocol': predicted_class,
             'confidence': float(confidence),
-            'jamming': jamming_params,
-            'spectrogram_url': spectrogram_url
+            'jammingParams': jamming_params
         })
     except Exception as e:
-        # Return full traceback in JSON for debugging
-        err = traceback.format_exc()
-        print(err)  # also logs to Render
-        return jsonify({'error': str(e), 'trace': err.split('\n')[-2] if '\n' in err else str(e)}), 500
+        # Logging shouldn't break the simulation
+        print(f"Firestore write failed: {e}")
+
+    # 7. Return results (spectrogram_url is a data URI of placeholder PNG)
+    return jsonify({
+        'detected_protocol': predicted_class,
+        'confidence': float(confidence),
+        'jamming': jamming_params,
+        'spectrogram_url': '/api/spectrogram/placeholder.png'
+    })
 
 @app.route('/api/spectrogram/<filename>')
 def get_spectrogram(filename):
-    path = os.path.join(SPECTRO_DIR, filename)
-    if not os.path.exists(path):
-        return jsonify({'error': 'Spectrogram not found'}), 404
-    return send_file(path, mimetype='image/png')
+    """Serve a placeholder PNG (always the same)."""
+    return send_file(
+        io.BytesIO(PLACEHOLDER_PNG),
+        mimetype='image/png',
+        as_attachment=False,
+        download_name='spectrogram.png'
+    )
 
 @app.route('/api/health')
 def health():
     return jsonify({'status': 'ok'})
+
+# ---------- Global CORS fallback (in case something goes wrong) ----------
+@app.after_request
+def add_cors_headers(response):
+    response.headers['Access-Control-Allow-Origin'] = 'https://echoshield.cephasgm.org'
+    response.headers['Access-Control-Allow-Headers'] = 'Authorization, Content-Type'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+    response.headers['Access-Control-Allow-Credentials'] = 'true'
+    return response
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
