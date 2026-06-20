@@ -1,32 +1,34 @@
 import os
 import io
-import json
 import base64
+import json
 import numpy as np
 from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 import firebase_admin
-from firebase_admin import credentials, firestore
-from simulator import generate_iq_and_spectrogram
-from ai_model import classify_spectrogram, generate_jamming_signal
+from firebase_admin import credentials, firestore, auth
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+
+from simulator import generate_iq_and_spectrogram
+from ai_model import classify_spectrogram, generate_jamming_signal
 
 app = Flask(__name__)
 CORS(app)
 
 # ---------- Firebase Admin Initialisation ----------
-# Use environment variable (for production) or local file (for development)
-firebase_creds = os.environ.get('FIREBASE_SERVICE_ACCOUNT')
-if firebase_creds:
-    cred = credentials.Certificate(json.loads(firebase_creds))
+# Use the secret file from Render, or local file for dev
+secret_path = '/etc/secrets/firebase-service-account.json'
+if os.path.exists(secret_path):
+    cred = credentials.Certificate(secret_path)
 else:
+    # Fallback to local file (development)
     cred = credentials.Certificate('firebase-service-account.json')
+
 firebase_admin.initialize_app(cred)
 db = firestore.client()
 
-# Static folder for spectrogram images
 SPECTRO_DIR = 'spectrograms'
 os.makedirs(SPECTRO_DIR, exist_ok=True)
 
@@ -37,7 +39,7 @@ def verify_token(request):
         return None, 'Missing or invalid Authorization header'
     id_token = auth_header.split('Bearer ')[1]
     try:
-        decoded_token = firebase_admin.auth.verify_id_token(id_token)
+        decoded_token = auth.verify_id_token(id_token)
         return decoded_token['uid'], None
     except Exception as e:
         return None, str(e)
