@@ -12,39 +12,29 @@
         html, body { height: 100%; overflow: hidden; }
         body {
             font-family: 'Inter', 'Segoe UI', sans-serif;
+            background: #0b0f17;
             color: #e0e6f0;
-            line-height: 1.4;
             display: flex;
             flex-direction: column;
             position: relative;
-            transition: background-image 1s ease-in-out;
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-            background-color: #0b0f17; /* fallback */
         }
-        /* Dynamic background images – will be changed via JS */
         body::before {
             content: "";
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: inherit;
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: 
+                url('https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?q=80&w=2070&auto=format&fit=crop') no-repeat center center/cover,
+                url('https://images.unsplash.com/photo-1517694712202-14dd9538aa97?q=80&w=2070&auto=format&fit=crop') no-repeat center center/cover;
+            background-blend-mode: overlay;
             filter: brightness(0.3);
             z-index: -1;
         }
-
         a { text-decoration: none; color: #4da8da; }
         header {
             background: rgba(8, 12, 24, 0.85);
             backdrop-filter: blur(12px);
             border-bottom: 1px solid rgba(255,255,255,0.08);
-            padding: 0.4rem 2rem;
+            padding: 0.4rem 1.5rem;
             flex-shrink: 0;
-            z-index: 10;
-        }
-        .header-inner {
-            max-width: 1400px;
-            margin: 0 auto;
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -52,18 +42,18 @@
         .logo {
             display: flex;
             align-items: center;
-            gap: 0.4rem;
+            gap: 0.5rem;
             font-size: 1.2rem;
             font-weight: 700;
             color: #fff;
         }
-        .logo i { color: #4da8da; font-size: 1.3rem; }
+        .logo i { color: #4da8da; }
         .logo span { color: #4da8da; }
         .user-area { display: flex; align-items: center; gap: 0.8rem; }
         .user-area span { color: #cbd5e1; font-size: 0.85rem; }
         .btn {
             padding: 0.35rem 1rem;
-            border-radius: 6px;
+            border-radius: 4px;
             font-weight: 600;
             border: none;
             cursor: pointer;
@@ -77,195 +67,204 @@
         }
         .btn-outline:hover { background: rgba(77,168,218,0.1); }
         .btn-danger {
-            background: transparent;
             color: #f87171;
             border: 1px solid #f87171;
+            background: transparent;
         }
         .btn-danger:hover { background: rgba(248,113,113,0.15); }
 
         main {
             flex: 1;
-            padding: 0.6rem 1rem;
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            grid-template-rows: 1fr 1fr;
-            gap: 0.6rem;
-            max-width: 1400px;
+            grid-template-columns: 1fr 1fr 1fr;
+            grid-template-rows: auto 1fr auto;
+            gap: 0.8rem;
+            padding: 0.8rem;
+            max-width: 1300px;
             margin: 0 auto;
             width: 100%;
-            overflow: hidden;
+            min-height: 0;
         }
-
         .card {
             background: rgba(18, 25, 40, 0.8);
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255,255,255,0.08);
             border-radius: 10px;
-            padding: 0.7rem;
-            display: flex;
-            flex-direction: column;
+            padding: 0.8rem;
             overflow: hidden;
         }
-        .card h3 {
-            font-size: 0.95rem;
-            color: #4da8da;
-            margin-bottom: 0.5rem;
-            white-space: nowrap;
-        }
-        .card .content {
-            flex: 1;
+        .card h2 { font-size: 1.1rem; margin-bottom: 0.5rem; color: #fff; }
+        .card h2 span { color: #4da8da; }
+
+        /* Radar card */
+        .radar-container {
             display: flex;
             flex-direction: column;
-            justify-content: center;
             align-items: center;
-        }
-
-        /* Radar card (2 rows tall?) We'll make it span 1 row, 1 column */
-        #radarCard { grid-column: 1 / 2; grid-row: 1 / 2; }
-        #statusCard { grid-column: 2 / 4; grid-row: 1 / 2; }  /* wider */
-        #mapCard { grid-column: 1 / 3; grid-row: 2 / 3; }
-        #historyCard { grid-column: 3 / 5; grid-row: 2 / 3; }
-
-        canvas#radarCanvas {
-            width: 100%;
-            aspect-ratio: 1 / 1;
-            max-width: 180px;
-            border-radius: 50%;
-            border: 2px solid rgba(77,168,218,0.4);
-            background: rgba(0,0,0,0.3);
-        }
-
-        .status-row {
-            display: flex;
-            gap: 1rem;
-            width: 100%;
-            justify-content: space-around;
-            text-align: center;
-        }
-        .status-item .label { font-size: 0.7rem; color: #94a3b8; }
-        .status-item .value { font-size: 1.1rem; font-weight: 700; color: #fff; }
-        .alert-flash {
-            animation: flash 0.5s ease-in-out 3;
-        }
-        @keyframes flash {
-            0%, 100% { background-color: transparent; }
-            50% { background-color: rgba(248, 113, 113, 0.4); }
-        }
-
-        /* Mini map */
-        #mapImage {
-            width: 100%;
+            justify-content: center;
             height: 100%;
-            border-radius: 6px;
-            object-fit: cover;
-            border: 1px solid rgba(255,255,255,0.1);
+        }
+        canvas { 
+            border-radius: 50%;
+            border: 2px solid rgba(77,168,218,0.3);
+            box-shadow: 0 0 20px rgba(77,168,218,0.15);
+        }
+        .status-box {
+            text-align: center;
+            margin-top: 0.4rem;
+        }
+        .status-text {
+            font-size: 0.95rem;
+            color: #4da8da;
+            font-weight: 600;
+            min-height: 1.4rem;
+        }
+        .sub-status {
+            font-size: 0.75rem;
+            color: #94a3b8;
         }
 
+        /* Map card */
+        .map-card {
+            background: url('https://images.unsplash.com/photo-1506744038136-46273834b3fb?q=80&w=2070&auto=format&fit=crop') center/cover no-repeat;
+            border-radius: 10px;
+            position: relative;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+        }
+        .map-overlay {
+            background: linear-gradient(0deg, rgba(0,0,0,0.8) 0%, transparent 100%);
+            padding: 0.5rem;
+            border-radius: 0 0 10px 10px;
+        }
+        .map-overlay h3 { font-size: 0.95rem; color: #fff; }
+        .map-overlay p { font-size:0.75rem; color:#94a3b8; }
+
+        /* Results card */
+        .result-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+            margin-top: 0.4rem;
+        }
+        .result-item {
+            background: rgba(255,255,255,0.03);
+            padding: 0.5rem;
+            border-radius: 6px;
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+        .result-item .label { font-size: 0.7rem; color: #94a3b8; }
+        .result-item .value { font-size: 0.9rem; font-weight: 600; color: #fff; }
+
+        .alert-badge {
+            background: #f87171;
+            color: white;
+            padding: 0.2rem 0.6rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            display: inline-block;
+            margin-bottom: 0.5rem;
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        /* History collapsible */
+        .history-card {
+            grid-column: 1 / -1;
+            max-height: 30vh;
+            overflow-y: auto;
+        }
         .history-table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 0.7rem;
-            overflow-y: auto;
+            font-size: 0.75rem;
         }
         .history-table th, .history-table td {
-            padding: 0.3rem 0.2rem;
-            text-align: left;
+            padding: 0.3rem;
             border-bottom: 1px solid rgba(255,255,255,0.05);
         }
         .history-table th { color: #4da8da; }
 
         footer {
             text-align: center;
-            padding: 0.5rem;
+            padding: 0.4rem;
             background: rgba(8, 12, 24, 0.9);
             backdrop-filter: blur(8px);
             color: #94a3b8;
             font-size: 0.7rem;
             border-top: 1px solid rgba(255,255,255,0.06);
             flex-shrink: 0;
-            z-index: 10;
         }
         footer span { color: #4da8da; }
 
-        @media (max-width: 900px) {
-            main {
-                grid-template-columns: 1fr 1fr;
-                grid-template-rows: auto;
-            }
-            #radarCard, #statusCard, #mapCard, #historyCard {
-                grid-column: span 1;
-            }
+        @media (max-width: 768px) {
+            main { grid-template-columns: 1fr; grid-template-rows: auto auto auto; }
+            .map-card { height: 150px; }
         }
     </style>
 </head>
 <body>
-    <!-- Background images will be applied inline via JS -->
     <header>
-        <div class="header-inner">
-            <a href="index.html" class="logo"><i class="fas fa-shield-alt"></i> CephasGM<span>|EchoShield</span></a>
-            <div class="user-area">
-                <span id="userEmail"></span>
-                <button class="btn btn-danger" id="logoutBtn">Logout</button>
-            </div>
+        <a href="index.html" class="logo"><i class="fas fa-shield-alt"></i> CephasGM<span>|EchoShield</span></a>
+        <div class="user-area">
+            <span id="userEmail"></span>
+            <button class="btn btn-danger" id="logoutBtn">Logout</button>
         </div>
     </header>
 
     <main>
-        <!-- RADAR -->
-        <div class="card" id="radarCard">
-            <h3><i class="fas fa-satellite-dish"></i> Live Radar</h3>
-            <div class="content">
-                <canvas id="radarCanvas" width="200" height="200"></canvas>
-                <div style="font-size:0.8rem; color:#4da8da; margin-top:0.3rem;" id="radarStatus">Scanning...</div>
-            </div>
-        </div>
-
-        <!-- STATUS & ALERTS -->
-        <div class="card" id="statusCard">
-            <h3><i class="fas fa-exclamation-triangle"></i> Threat Status</h3>
-            <div class="content">
-                <div id="alertArea" style="width:100%; text-align:center;">
-                    <div class="status-row">
-                        <div class="status-item">
-                            <div class="label">Last Detection</div>
-                            <div class="value" id="detectedDrone">--</div>
-                        </div>
-                        <div class="status-item">
-                            <div class="label">Confidence</div>
-                            <div class="value" id="confidence">--</div>
-                        </div>
-                        <div class="status-item">
-                            <div class="label">Countermeasure</div>
-                            <div class="value" id="jamType">--</div>
-                        </div>
-                        <div class="status-item">
-                            <div class="label">Frequency</div>
-                            <div class="value" id="jamFreq">--</div>
-                        </div>
-                    </div>
-                    <div id="alertMessage" style="margin-top:0.5rem; font-weight:600; min-height:1.2rem;"></div>
+        <!-- Radar Card -->
+        <div class="card" style="grid-row: span 2;">
+            <div class="radar-container">
+                <canvas id="radarCanvas" width="180" height="180"></canvas>
+                <div class="status-box">
+                    <div class="status-text" id="scanStatus">Initialising...</div>
+                    <div class="sub-status" id="scanSubstatus">Auto‑scan active</div>
                 </div>
             </div>
         </div>
 
-        <!-- TACTICAL MAP -->
-        <div class="card" id="mapCard">
-            <h3><i class="fas fa-map-marked-alt"></i> Aerial Surveillance</h3>
-            <div class="content" style="position:relative;">
-                <img id="mapImage" src="https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?q=80&w=800&auto=format&fit=crop" alt="Tactical Map">
-                <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:#ff4444; font-size:1.5rem; pointer-events:none;">
-                    <i class="fas fa-crosshairs"></i>
-                </div>
+        <!-- Map Card -->
+        <div class="card map-card" id="mapCard">
+            <div class="map-overlay">
+                <h3><i class="fas fa-satellite"></i> Live Aerial View</h3>
+                <p id="locationText">Acquiring your position...</p>
             </div>
         </div>
 
-        <!-- HISTORY -->
-        <div class="card" id="historyCard">
-            <h3><i class="fas fa-history"></i> Mission Log</h3>
-            <div class="content" style="overflow-y:auto; width:100%;">
-                <div id="historyContainer"></div>
+        <!-- Results Card -->
+        <div class="card" id="resultsCard">
+            <h2><span>Detection</span> Report</h2>
+            <div id="noDetection" style="color:#94a3b8; font-size:0.9rem;">No threats detected yet.<br>Radar is scanning automatically.</div>
+            <div id="detectionContent" style="display:none;">
+                <div class="alert-badge"><i class="fas fa-exclamation-triangle"></i> Threat Neutralised</div>
+                <div class="result-grid">
+                    <div class="result-item"><div class="label">Drone</div><div class="value" id="detectedDrone">-</div></div>
+                    <div class="result-item"><div class="label">Confidence</div><div class="value" id="confidence">-</div></div>
+                    <div class="result-item"><div class="label">Countermeasure</div><div class="value" id="jamType">-</div></div>
+                    <div class="result-item"><div class="label">Frequency</div><div class="value" id="jamFreq">-</div></div>
+                    <div class="result-item"><div class="label">Bandwidth</div><div class="value" id="jamBW">-</div></div>
+                    <div class="result-item"><div class="label">Power</div><div class="value" id="jamPower">-</div></div>
+                </div>
+                <img id="spectrogramImg" style="width:100%; border-radius:6px; margin-top:0.5rem; display:none;" alt="Spectrogram">
             </div>
         </div>
+
+        <!-- History Card (collapsed by default) -->
+        <details class="card history-card" style="grid-column: 1 / -1; margin-top:0;">
+            <summary style="color:#4da8da; font-weight:600; cursor:pointer; font-size:0.9rem;">
+                <i class="fas fa-history"></i> Mission History
+            </summary>
+            <div id="historyContainer" style="margin-top:0.5rem;">
+                <p style="color:#94a3b8;">Loading...</p>
+            </div>
+        </details>
     </main>
 
     <footer>
@@ -295,49 +294,91 @@
 
         const API_BASE = 'https://echoshield-api-4x6z.onrender.com';
 
-        // ---------- Dynamic Background Rotator ----------
-        const bgImages = [
-            'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?q=80&w=2070&auto=format&fit=crop',
-            'https://images.unsplash.com/photo-1581092160562-40aa08e78837?q=80&w=2070&auto=format&fit=crop',
-            'https://images.unsplash.com/photo-1581092160607-ee22636b16e0?q=80&w=2070&auto=format&fit=crop',
-            'https://images.unsplash.com/photo-1581091870623-7a9b83e1e1b3?q=80&w=2070&auto=format&fit=crop',
-            'https://images.unsplash.com/photo-1581092162384-6d99d1c8e4b3?q=80&w=2070&auto=format&fit=crop'
-        ];
-        let bgIndex = 0;
-        function changeBackground() {
-            document.body.style.backgroundImage = `url(${bgImages[bgIndex]})`;
-            bgIndex = (bgIndex + 1) % bgImages.length;
-        }
-        changeBackground();
-        setInterval(changeBackground, 10000); // change every 10 seconds
-
-        // ---------- Auth Check ----------
+        // ---------- Auth ----------
         auth.onAuthStateChanged(async (user) => {
             if (!user) { window.location.href = 'signin.html'; return; }
             document.getElementById('userEmail').textContent = user.email;
             loadHistory(user.uid);
-            startAutoDetection(user);
+            initGeoMap();
+            startAutoScan();
         });
 
         document.getElementById('logoutBtn').addEventListener('click', () => {
             auth.signOut().then(() => window.location.href = 'signin.html');
         });
 
-        // ---------- Radar Animation (always on) ----------
+        // ---------- Geolocation & Map ----------
+        function initGeoMap() {
+            const locationText = document.getElementById('locationText');
+            const mapCard = document.getElementById('mapCard');
+
+            if (!navigator.geolocation) {
+                locationText.textContent = "Geolocation not supported by your browser.";
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+                    locationText.textContent = `Your position: ${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+                    
+                    // Use OpenStreetMap static map (free, no API key)
+                    const zoom = 14;
+                    const size = `${mapCard.clientWidth}x${mapCard.clientHeight}` || "400x300";
+                    const marker = `${lat},${lon},red-pushpin`;
+                    const mapUrl = `https://staticmap.openstreetmap.de/staticmap.php?center=${lat},${lon}&zoom=${zoom}&size=${size}&markers=${marker}`;
+                    
+                    mapCard.style.backgroundImage = `url('${mapUrl}')`;
+                    mapCard.style.backgroundSize = 'cover';
+                    mapCard.style.backgroundPosition = 'center';
+                },
+                (error) => {
+                    locationText.textContent = "Location access denied. Using default view.";
+                    // Keep existing background
+                },
+                { enableHighAccuracy: true, timeout: 5000, maximumAge: 60000 }
+            );
+        }
+
+        // ---------- Audio Alert ----------
+        function playAlertSound() {
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const now = audioCtx.currentTime;
+                for (let i = 0; i < 3; i++) {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'square';
+                    osc.frequency.value = 880 + i * 200;
+                    gain.gain.setValueAtTime(0.3, now + i * 0.15);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.15 + 0.1);
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start(now + i * 0.15);
+                    osc.stop(now + i * 0.15 + 0.12);
+                }
+            } catch (e) {
+                console.warn('Audio alert failed', e);
+            }
+        }
+
+        // ---------- Radar Animation ----------
         const canvas = document.getElementById('radarCanvas');
         const ctx = canvas.getContext('2d');
+        let animationId = null;
         let scanAngle = 0;
         let radarDots = [];
+        let detectionActive = false;
 
         function generateDots() {
             radarDots = [];
             for (let i = 0; i < 8; i++) {
                 const angle = Math.random() * Math.PI * 2;
-                const distance = 20 + Math.random() * 70;
+                const distance = 20 + Math.random() * 60;
                 radarDots.push({ angle, distance, opacity: Math.random() * 0.8 + 0.2 });
             }
         }
-        generateDots();
 
         function drawRadar() {
             const w = canvas.width;
@@ -363,23 +404,23 @@
             radarDots.forEach(dot => {
                 const x = cx + Math.cos(dot.angle) * dot.distance;
                 const y = cy + Math.sin(dot.angle) * dot.distance;
-                let beam = scanAngle % (Math.PI*2);
-                let dotA = dot.angle % (Math.PI*2);
-                let diff = Math.abs(beam - dotA);
-                if (diff > Math.PI) diff = Math.PI*2 - diff;
-                const hit = diff < 0.18;
+                let beamAngle = scanAngle % (Math.PI * 2);
+                let dotAngle = dot.angle % (Math.PI * 2);
+                let diff = Math.abs(beamAngle - dotAngle);
+                if (diff > Math.PI) diff = Math.PI * 2 - diff;
+                const hit = diff < 0.15;
                 if (hit) {
                     ctx.beginPath();
-                    ctx.arc(x, y, 2.5, 0, 2*Math.PI);
-                    ctx.fillStyle = '#4da8da';
+                    ctx.arc(x, y, 3, 0, 2 * Math.PI);
+                    ctx.fillStyle = detectionActive ? '#f87171' : '#4da8da';
                     ctx.shadowBlur = 12;
-                    ctx.shadowColor = '#4da8da';
+                    ctx.shadowColor = detectionActive ? '#f87171' : '#4da8da';
                     ctx.fill();
                     ctx.shadowBlur = 0;
                 } else {
                     ctx.beginPath();
-                    ctx.arc(x, y, 1.5, 0, 2*Math.PI);
-                    ctx.fillStyle = `rgba(148,163,184,${dot.opacity})`;
+                    ctx.arc(x, y, 1.5, 0, 2 * Math.PI);
+                    ctx.fillStyle = `rgba(148, 163, 184, ${dot.opacity})`;
                     ctx.fill();
                 }
             });
@@ -387,131 +428,139 @@
             ctx.save();
             ctx.translate(cx, cy);
             ctx.rotate(scanAngle);
-            const grad = ctx.createRadialGradient(0,0,0,0,0,radius);
-            grad.addColorStop(0, 'rgba(77,168,218,0.5)');
-            grad.addColorStop(0.7, 'rgba(77,168,218,0.1)');
-            grad.addColorStop(1, 'rgba(77,168,218,0)');
+            const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, radius);
+            gradient.addColorStop(0, 'rgba(77, 168, 218, 0.4)');
+            gradient.addColorStop(0.6, 'rgba(77, 168, 218, 0.1)');
+            gradient.addColorStop(1, 'rgba(77, 168, 218, 0)');
             ctx.beginPath();
-            ctx.moveTo(0,0);
-            ctx.arc(0,0,radius, -0.1, 0.1);
+            ctx.moveTo(0, 0);
+            ctx.arc(0, 0, radius, -0.1, 0.1);
             ctx.closePath();
-            ctx.fillStyle = grad;
+            ctx.fillStyle = gradient;
             ctx.fill();
             ctx.restore();
 
-            scanAngle += 0.05;
-            requestAnimationFrame(drawRadar);
-        }
-        drawRadar();
-
-        // ---------- Audio Alert (beep) ----------
-        function playAlertSound() {
-            try {
-                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                const osc = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
-                osc.connect(gain);
-                gain.connect(audioCtx.destination);
-                osc.type = 'square';
-                osc.frequency.setValueAtTime(800, audioCtx.currentTime);
-                gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
-                osc.start();
-                osc.stop(audioCtx.currentTime + 0.15);
-            } catch(e) { console.log('Audio not supported'); }
+            scanAngle += 0.03;
+            animationId = requestAnimationFrame(drawRadar);
         }
 
-        // ---------- Automatic Detection Cycle ----------
-        let autoInterval;
-        let currentUser = null;
-
-        function startAutoDetection(user) {
-            currentUser = user;
-            // Run first detection after 2 seconds, then every 8-12 seconds
-            setTimeout(runAutoDetection, 2000);
-            autoInterval = setInterval(runAutoDetection, 10000);
+        function startRadar() {
+            generateDots();
+            drawRadar();
         }
 
-        async function runAutoDetection() {
-            if (!currentUser) return;
+        // ---------- Auto Detection Logic ----------
+        const scanStatusEl = document.getElementById('scanStatus');
+        const scanSubstatusEl = document.getElementById('scanSubstatus');
+        const noDetectionEl = document.getElementById('noDetection');
+        const detectionContent = document.getElementById('detectionContent');
+        let autoScanInterval = null;
+
+        function startAutoScan() {
+            scanStatusEl.textContent = 'Scanning...';
+            scanSubstatusEl.textContent = 'Continuous RF monitoring';
+            detectionActive = false;
+            setTimeout(runDetection, 2000);
+            autoScanInterval = setInterval(runDetection, 15000);
+        }
+
+        async function runDetection() {
+            if (window.detectionInProgress) return;
+            window.detectionInProgress = true;
+
             const protocols = ['wifi', 'lora', 'dji'];
-            const randomProto = protocols[Math.floor(Math.random() * protocols.length)];
+            const protocol = protocols[Math.floor(Math.random() * protocols.length)];
             
-            // Update radar status
-            document.getElementById('radarStatus').textContent = 'Locking target...';
+            scanStatusEl.textContent = 'Analyzing signal...';
+            scanSubstatusEl.textContent = 'Target acquired, classifying';
             
             try {
-                const idToken = await currentUser.getIdToken();
+                const user = auth.currentUser;
+                if (!user) throw new Error('Not authenticated');
+                const idToken = await user.getIdToken();
+
                 const response = await fetch(`${API_BASE}/api/simulate`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${idToken}`
                     },
-                    body: JSON.stringify({ protocol: randomProto })
+                    body: JSON.stringify({ protocol })
                 });
 
-                if (!response.ok) throw new Error('Detection failed');
+                if (!response.ok) {
+                    const errData = await response.json();
+                    throw new Error(errData.error || 'Detection failed');
+                }
+
                 const data = await response.json();
                 
-                // Trigger alert
+                detectionActive = true;
                 playAlertSound();
-                document.getElementById('statusCard').classList.add('alert-flash');
-                setTimeout(() => document.getElementById('statusCard').classList.remove('alert-flash'), 1500);
                 
-                // Update UI
-                updateStatusDisplay(data);
-                document.getElementById('radarStatus').textContent = 'Target neutralized';
+                scanStatusEl.textContent = 'THREAT NEUTRALISED';
+                scanSubstatusEl.textContent = 'Countermeasure deployed';
                 
-                // Log to Firestore
-                db.collection('simulations').add({
-                    userId: currentUser.uid,
-                    userEmail: currentUser.email,
-                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                    protocolRequested: randomProto,
-                    detectedProtocol: data.detected_protocol,
-                    confidence: data.confidence,
-                    jammingParams: data.jamming
-                });
+                noDetectionEl.style.display = 'none';
+                detectionContent.style.display = 'block';
                 
-                // Refresh history
-                loadHistory(currentUser.uid);
-                
-                // Reset radar status after a short delay
+                document.getElementById('detectedDrone').textContent = mapDroneName(data.detected_protocol);
+                document.getElementById('confidence').textContent = (data.confidence * 100).toFixed(1) + '%';
+                const jam = data.jamming;
+                document.getElementById('jamType').textContent = mapJamName(jam.modulation);
+                document.getElementById('jamFreq').textContent = (jam.center_freq_hz / 1e6).toFixed(2) + ' MHz';
+                document.getElementById('jamBW').textContent = (jam.bandwidth_hz / 1e3).toFixed(1) + ' kHz';
+                document.getElementById('jamPower').textContent = jam.power_dbm + ' dBm';
+
+                const img = document.getElementById('spectrogramImg');
+                if (data.spectrogram_url) {
+                    img.src = API_BASE + data.spectrogram_url;
+                    img.style.display = 'block';
+                } else {
+                    img.style.display = 'none';
+                }
+
+                if (user) {
+                    db.collection('simulations').add({
+                        userId: user.uid,
+                        userEmail: user.email,
+                        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                        protocolRequested: protocol,
+                        detectedProtocol: data.detected_protocol,
+                        confidence: data.confidence,
+                        jammingParams: data.jamming
+                    });
+                    loadHistory(user.uid);
+                }
+
                 setTimeout(() => {
-                    document.getElementById('radarStatus').textContent = 'Scanning...';
-                }, 3000);
-                
+                    detectionActive = false;
+                    scanStatusEl.textContent = 'Scanning...';
+                    scanSubstatusEl.textContent = 'Continuous RF monitoring';
+                    noDetectionEl.style.display = 'block';
+                    detectionContent.style.display = 'none';
+                }, 12000);
+
             } catch (error) {
-                console.error('Auto-detection error:', error);
-                document.getElementById('radarStatus').textContent = 'Scanning...';
+                scanStatusEl.textContent = 'Scan interrupted';
+                scanSubstatusEl.textContent = 'Resuming auto‑scan';
+                console.error('Detection error:', error);
+                setTimeout(() => {
+                    scanStatusEl.textContent = 'Scanning...';
+                    scanSubstatusEl.textContent = 'Continuous RF monitoring';
+                }, 3000);
+            } finally {
+                window.detectionInProgress = false;
             }
         }
 
-        function mapDroneName(protocol) {
-            const names = {
-                'wifi': 'Consumer Drone (Wi-Fi)',
-                'lora': 'Long-Range FPV (LoRa)',
-                'dji': 'Tactical UAV (DJI)'
-            };
-            return names[protocol] || protocol.toUpperCase();
+        function mapDroneName(p) {
+            const names = { wifi: 'Consumer Drone', lora: 'Long‑Range FPV', dji: 'Tactical UAV' };
+            return names[p] || p.toUpperCase();
         }
-
-        function mapJamName(modulation) {
-            const names = {
-                'wideband_noise': 'Wideband Noise Barrage',
-                'chirp_jammer': 'Chirp Disruption Pulse',
-                'sweeping_tone': 'Frequency Sweeping Jammer'
-            };
-            return names[modulation] || modulation.replace('_', ' ');
-        }
-
-        function updateStatusDisplay(data) {
-            document.getElementById('detectedDrone').textContent = mapDroneName(data.detected_protocol);
-            document.getElementById('confidence').textContent = (data.confidence * 100).toFixed(0) + '%';
-            const jam = data.jamming;
-            document.getElementById('jamType').textContent = mapJamName(jam.modulation);
-            document.getElementById('jamFreq').textContent = (jam.center_freq_hz / 1e6).toFixed(2) + ' MHz';
-            document.getElementById('alertMessage').innerHTML = `<span style="color:#ff6666;">⚠ THREAT DETECTED:</span> ${mapDroneName(data.detected_protocol)} – ${mapJamName(jam.modulation)} deployed.`;
+        function mapJamName(m) {
+            const names = { wideband_noise: 'Wideband Barrage', chirp_jammer: 'Chirp Disruptor', sweeping_tone: 'Sweeping Jammer' };
+            return names[m] || m.replace('_', ' ');
         }
 
         // ---------- History ----------
@@ -521,32 +570,31 @@
                 const snapshot = await db.collection('simulations')
                     .where('userId', '==', uid)
                     .orderBy('timestamp', 'desc')
-                    .limit(4)
+                    .limit(5)
                     .get();
 
                 if (snapshot.empty) {
-                    container.innerHTML = '<p style="color:#94a3b8; font-size:0.8rem;">No logs yet.</p>';
+                    container.innerHTML = '<p style="color:#94a3b8;">No missions logged yet.</p>';
                     return;
                 }
 
-                let html = `<table class="history-table"><thead><tr><th>Time</th><th>Target</th><th>Detected</th><th>Conf</th><th>Action</th></tr></thead><tbody>`;
+                let html = `<table class="history-table">
+                    <thead><tr><th>Time</th><th>Target</th><th>Detected</th><th>Conf</th><th>Action</th></tr></thead><tbody>`;
                 snapshot.forEach(doc => {
                     const d = doc.data();
-                    const time = d.timestamp ? d.timestamp.toDate().toLocaleTimeString() : 'now';
-                    html += `
-                        <tr>
-                            <td>${time}</td>
-                            <td>${mapDroneName(d.protocolRequested)}</td>
-                            <td>${mapDroneName(d.detectedProtocol)}</td>
-                            <td>${(d.confidence * 100).toFixed(0)}%</td>
-                            <td>${mapJamName(d.jammingParams.modulation)}</td>
-                        </tr>
-                    `;
+                    const time = d.timestamp ? d.timestamp.toDate().toLocaleTimeString() : 'Now';
+                    html += `<tr>
+                        <td>${time}</td>
+                        <td>${mapDroneName(d.protocolRequested)}</td>
+                        <td>${mapDroneName(d.detectedProtocol)}</td>
+                        <td>${(d.confidence*100).toFixed(0)}%</td>
+                        <td>${mapJamName(d.jammingParams.modulation)}</td>
+                    </tr>`;
                 });
                 html += '</tbody></table>';
                 container.innerHTML = html;
-            } catch (error) {
-                container.innerHTML = '<p style="color:#f87171; font-size:0.8rem;">Error loading log.</p>';
+            } catch (e) {
+                container.innerHTML = `<p style="color:#f87171;">Error loading history.</p>`;
             }
         }
 
@@ -558,6 +606,9 @@
                     .catch(err => console.error('SW failed', err));
             });
         }
+
+        // Start radar immediately
+        startRadar();
     </script>
 </body>
 </html>
