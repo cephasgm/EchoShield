@@ -1,0 +1,2 @@
+# Cloudflare Pages redirects – proxy API calls to backend
+/api/* https://api.cephasgm.org/api/:splat 200
