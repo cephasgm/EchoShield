@@ -298,7 +298,7 @@
         const db = firebase.firestore();
 
         // ---------- API Base (direct Render URL) ----------
-        const API_BASE = 'https://echoshield-api-4x6z.onrender.com';
+        const API_BASE = '';   // same origin, routed through Pages Function
 
         // ---------- Authentication Check ----------
         auth.onAuthStateChanged(async (user) => {
@@ -382,7 +382,7 @@
             // Spectrogram image (direct URL from Render)
             const img = document.getElementById('spectrogramImg');
             if (data.spectrogram_url) {
-                img.src = `https://echoshield-api-4x6z.onrender.com${data.spectrogram_url}`;
+                img.src = data.spectrogram_url;   // relative URL, also proxied
                 img.style.display = 'block';
             } else {
                 img.style.display = 'none';
