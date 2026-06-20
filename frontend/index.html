@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EchoShield – AI Anti‑Drone Defense | CephasGM</title>
+    <meta name="description" content="EchoShield – Software‑based anti‑drone RF simulator with AI detection and jamming generation. No hardware required.">
+    <meta name="theme-color" content="#0a121f">
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: 'Inter', 'Segoe UI', sans-serif;
+            background: #0b0f17;
+            color: #e0e6f0;
+            line-height: 1.5;
+            position: relative;
+            min-height: 100vh;
+        }
+        /* Background image with dark overlay */
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: url('https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?q=80&w=2070&auto=format&fit=crop') no-repeat center center/cover;
+            filter: brightness(0.25);
+            z-index: -1;
+        }
+        a { text-decoration: none; color: #4da8da; }
+        ul { list-style: none; }
+        img { max-width: 100%; display: block; }
+
+        /* Header */
+        header {
+            background: rgba(8, 12, 24, 0.8);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.8rem 2rem;
+        }
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #fff;
+        }
+        .logo i { color: #4da8da; font-size: 1.6rem; }
+        .logo span { color: #4da8da; }
+        nav a {
+            color: #cbd5e1;
+            margin-left: 2rem;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+        nav a:hover { color: #4da8da; }
+        .btn {
+            padding: 0.55rem 1.6rem;
+            border-radius: 6px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: background 0.3s, transform 0.2s;
+            font-size: 0.9rem;
+            display: inline-block;
+        }
+        .btn-outline {
+            border: 1px solid #4da8da;
+            color: #4da8da;
+            background: transparent;
+        }
+        .btn-outline:hover { background: rgba(77,168,218,0.1); }
+        .btn-primary {
+            background: #4da8da;
+            color: #0b0f17;
+        }
+        .btn-primary:hover { background: #3c8dbc; }
+
+        /* Hero */
+        .hero {
+            text-align: center;
+            padding: 6rem 2rem 4rem;
+        }
+        .hero h1 {
+            font-size: 2.8rem;
+            font-weight: 800;
+            color: #fff;
+            margin-bottom: 1rem;
+            line-height: 1.2;
+        }
+        .hero h1 span { color: #4da8da; }
+        .hero p {
+            max-width: 700px;
+            margin: 0 auto 2rem;
+            font-size: 1.1rem;
+            color: #b0c4de;
+        }
+
+        /* Sections */
+        .section {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 4rem 2rem;
+        }
+        .section-title {
+            text-align: center;
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 2.5rem;
+            color: #fff;
+        }
+        .section-title span { color: #4da8da; }
+
+        .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 2rem; }
+        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem; }
+
+        .card {
+            background: rgba(18, 25, 40, 0.85);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 10px;
+            padding: 2rem 1.8rem;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+        .card:hover { transform: translateY(-4px); border-color: rgba(77,168,218,0.4); }
+        .card i { font-size: 2rem; color: #4da8da; margin-bottom: 1rem; }
+        .card h3 { color: #fff; margin-bottom: 0.8rem; }
+        .card p { color: #b0c4de; font-size: 0.95rem; }
+
+        .step-row {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 2rem;
+        }
+        .step {
+            background: rgba(18, 25, 40, 0.85);
+            backdrop-filter: blur(8px);
+            border-radius: 10px;
+            padding: 1.8rem;
+            text-align: center;
+            flex: 1 1 160px;
+            max-width: 200px;
+        }
+        .step-circle {
+            background: #4da8da;
+            color: #0b0f17;
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1.3rem;
+            margin: 0 auto 0.8rem;
+        }
+
+        footer {
+            text-align: center;
+            padding: 2rem;
+            background: rgba(8, 12, 24, 0.9);
+            backdrop-filter: blur(8px);
+            color: #94a3b8;
+            font-size: 0.9rem;
+            border-top: 1px solid rgba(255,255,255,0.06);
+        }
+        footer span { color: #4da8da; }
+
+        @media (max-width: 768px) {
+            .grid-2, .grid-3 { grid-template-columns: 1fr; }
+            .hero h1 { font-size: 2rem; }
+            .nav-container { flex-wrap: wrap; justify-content: center; gap: 0.5rem; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="nav-container">
+            <a href="#" class="logo"><i class="fas fa-shield-alt"></i> CephasGM<span>|EchoShield</span></a>
+            <nav>
+                <a href="#about">About</a>
+                <a href="#features">Features</a>
+                <a href="#workflow">How It Works</a>
+                <a href="signin.html" class="btn btn-outline" style="margin-left:1.5rem;">Sign In</a>
+                <a href="signup.html" class="btn btn-primary">Sign Up</a>
+            </nav>
+        </div>
+    </header>
+
+    <section class="hero">
+        <h1>AI‑Driven <span>Drone Defense</span><br>Without Hardware</h1>
+        <p>EchoShield simulates real‑world drone RF protocols, classifies them with deep learning, and generates optimal jamming signals — all in software, ready for SDR deployment.</p>
+        <a href="signup.html" class="btn btn-primary" style="font-size:1rem; padding:0.8rem 2.2rem;">Start Simulating Now</a>
+    </section>
+
+    <section class="section" id="about">
+        <h2 class="section-title">About <span>EchoShield</span></h2>
+        <div class="grid-2">
+            <div>
+                <h3 style="color:#fff; margin-bottom:1rem;">The Simulated Battlefield</h3>
+                <p>We re‑create Wi‑Fi (2.4 GHz OFDM), LoRa (868 MHz chirp), and DJI‑style frequency‑hopping protocols. The AI learns from synthetic IQ samples and spectrograms, enabling detection and jamming without any radio hardware.</p>
+            </div>
+            <div>
+                <h3 style="color:#fff; margin-bottom:1rem;">Real‑World Ready</h3>
+                <p>The same models and algorithms can be flashed onto software‑defined radios (HackRF, LimeSDR) for field use. Airport security, military, and critical infrastructure teams train with EchoShield before deployment.</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="section" id="features">
+        <h2 class="section-title">Core <span>Capabilities</span></h2>
+        <div class="grid-3">
+            <div class="card">
+                <i class="fas fa-broadcast-tower"></i>
+                <h3>RF Simulation Engine</h3>
+                <p>Generates accurate IQ signals for three drone protocols with configurable noise and interference.</p>
+            </div>
+            <div class="card">
+                <i class="fas fa-brain"></i>
+                <h3>AI Classification</h3>
+                <p>Convolutional neural network identifies protocol and confidence level from spectrograms (95%+ accuracy).</p>
+            </div>
+            <div class="card">
+                <i class="fas fa-bolt"></i>
+                <h3>Adaptive Jamming</h3>
+                <p>Prescribes optimal countermeasure: wideband noise, chirp jammer, or sweeping tone based on detected drone type.</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="section" id="workflow">
+        <h2 class="section-title">How It <span>Works</span></h2>
+        <div class="step-row">
+            <div class="step">
+                <div class="step-circle">1</div>
+                <h4>Select Protocol</h4>
+                <p>Pick Wi‑Fi, LoRa, or DJI from your dashboard.</p>
+            </div>
+            <div class="step">
+                <div class="step-circle">2</div>
+                <h4>AI Analyzes</h4>
+                <p>Spectrogram is generated and fed to the neural network.</p>
+            </div>
+            <div class="step">
+                <div class="step-circle">3</div>
+                <h4>Jamming Output</h4>
+                <p>Optimal waveform parameters are returned & logged.</p>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <p>&copy; 2025 Cephas GM | Innovating for Tomorrow</p>
+        <p><span>EchoShield</span> – AI‑Powered Drone Defense</p>
+    </footer>
+
+    <script>
+        // Service Worker Registration (PWA)
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(reg => console.log('SW registered'))
+                    .catch(err => console.error('SW failed', err));
+            });
+        }
+    </script>
+</body>
+</html>

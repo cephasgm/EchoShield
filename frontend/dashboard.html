@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard – EchoShield | CephasGM</title>
+    <meta name="theme-color" content="#0a121f">
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; height: 100%; }
+        body {
+            font-family: 'Inter', 'Segoe UI', sans-serif;
+            background: #0b0f17;
+            color: #e0e6f0;
+            line-height: 1.5;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: url('https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?q=80&w=2070&auto=format&fit=crop') no-repeat center center/cover;
+            filter: brightness(0.25);
+            z-index: -1;
+        }
+        a { text-decoration: none; color: #4da8da; }
+        header {
+            background: rgba(8, 12, 24, 0.8);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            padding: 0.8rem 2rem;
+        }
+        .header-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #fff;
+        }
+        .logo i { color: #4da8da; font-size: 1.6rem; }
+        .logo span { color: #4da8da; }
+        .user-area {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .user-area span { color: #cbd5e1; font-size: 0.95rem; }
+        .btn {
+            padding: 0.55rem 1.4rem;
+            border-radius: 6px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: 0.3s;
+            font-size: 0.9rem;
+        }
+        .btn-outline {
+            border: 1px solid #4da8da;
+            color: #4da8da;
+            background: transparent;
+        }
+        .btn-outline:hover { background: rgba(77,168,218,0.1); }
+        .btn-primary {
+            background: #4da8da;
+            color: #0b0f17;
+        }
+        .btn-primary:hover { background: #3c8dbc; }
+        .btn-block { width: 100%; padding: 0.8rem; font-size: 1rem; }
+
+        main {
+            flex: 1;
+            padding: 2rem;
+            max-width: 1100px;
+            margin: 0 auto;
+            width: 100%;
+        }
+        .card {
+            background: rgba(18, 25, 40, 0.85);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+        h2 { margin-bottom: 1.5rem; color: #fff; }
+        h2 span { color: #4da8da; }
+        h3 { color: #fff; margin-bottom: 1rem; }
+
+        .sim-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+            align-items: flex-end;
+        }
+        .sim-row select {
+            padding: 0.7rem 1rem;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 6px;
+            color: #fff;
+            font-size: 0.95rem;
+            outline: none;
+            flex: 1;
+            min-width: 200px;
+        }
+        .sim-row button {
+            white-space: nowrap;
+        }
+
+        .result-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+        .result-item {
+            background: rgba(255,255,255,0.03);
+            padding: 1.2rem;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+        .result-item .label {
+            font-size: 0.85rem;
+            color: #94a3b8;
+            margin-bottom: 0.3rem;
+        }
+        .result-item .value {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #fff;
+        }
+        .spec-image {
+            width: 100%;
+            border-radius: 8px;
+            margin-top: 1.5rem;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .history-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        .history-table th, .history-table td {
+            padding: 0.8rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .history-table th {
+            color: #4da8da;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        .history-table td {
+            font-size: 0.9rem;
+            color: #cbd5e1;
+        }
+
+        .loader {
+            border: 3px solid rgba(255,255,255,0.1);
+            border-top: 3px solid #4da8da;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 0.8s linear infinite;
+            display: inline-block;
+            vertical-align: middle;
+            margin-right: 0.5rem;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .error-message {
+            background: rgba(248, 113, 113, 0.15);
+            border: 1px solid #f87171;
+            padding: 0.8rem;
+            border-radius: 6px;
+            color: #fca5a5;
+            margin-bottom: 1rem;
+            display: none;
+        }
+
+        footer {
+            text-align: center;
+            padding: 1.5rem;
+            background: rgba(8, 12, 24, 0.9);
+            backdrop-filter: blur(8px);
+            color: #94a3b8;
+            font-size: 0.85rem;
+            border-top: 1px solid rgba(255,255,255,0.06);
+        }
+        footer span { color: #4da8da; }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-inner">
+            <a href="index.html" class="logo"><i class="fas fa-shield-alt"></i> CephasGM<span>|EchoShield</span></a>
+            <div class="user-area">
+                <span id="userEmail"></span>
+                <button class="btn btn-outline" id="logoutBtn">Logout</button>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <!-- Simulation Panel -->
+        <div class="card" id="simPanel">
+            <h2><span>Drone Signal</span> Simulator</h2>
+            <div class="error-message" id="simError"></div>
+            <div class="sim-row">
+                <select id="protocolSelect">
+                    <option value="wifi">Wi‑Fi 2.4 GHz (OFDM)</option>
+                    <option value="lora">LoRa 868 MHz (Chirp)</option>
+                    <option value="dji">DJI‑Style Frequency Hopping</option>
+                </select>
+                <button class="btn btn-primary" id="runSimBtn"><i class="fas fa-play"></i> Run Simulation</button>
+            </div>
+            <div id="simLoading" style="display:none; margin-top:1rem;">
+                <span class="loader"></span> Processing signal & AI classification...
+            </div>
+            <div id="simResults" style="display:none;">
+                <h3 style="margin-top:1.8rem;">Analysis Result</h3>
+                <div class="result-grid">
+                    <div class="result-item">
+                        <div class="label">Detected Protocol</div>
+                        <div class="value" id="detectedProtocol">-</div>
+                    </div>
+                    <div class="result-item">
+                        <div class="label">Confidence</div>
+                        <div class="value" id="confidence">-</div>
+                    </div>
+                    <div class="result-item">
+                        <div class="label">Jammer Centre Freq</div>
+                        <div class="value" id="jamFreq">-</div>
+                    </div>
+                    <div class="result-item">
+                        <div class="label">Bandwidth</div>
+                        <div class="value" id="jamBW">-</div>
+                    </div>
+                    <div class="result-item">
+                        <div class="label">Modulation</div>
+                        <div class="value" id="jamMod">-</div>
+                    </div>
+                    <div class="result-item">
+                        <div class="label">Power (dBm)</div>
+                        <div class="value" id="jamPower">-</div>
+                    </div>
+                </div>
+                <img id="spectrogramImg" class="spec-image" alt="Spectrogram" style="display:none;">
+            </div>
+        </div>
+
+        <!-- History Panel -->
+        <div class="card">
+            <h2><span>Simulation</span> History</h2>
+            <div id="historyContainer">
+                <p style="color:#94a3b8;">Loading history...</p>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 Cephas GM | Innovating for Tomorrow</p>
+        <p><span>EchoShield</span> – AI‑Powered Drone Defense</p>
+    </footer>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore-compat.js"></script>
+
+    <script>
+        // ---------- Firebase Init ----------
+        const firebaseConfig = {
+            apiKey: "AIzaSyCM_7S0zPDz4G2xzlevL3pwj7U0pYih-Zk",
+            authDomain: "echoshield-38f36.firebaseapp.com",
+            projectId: "echoshield-38f36",
+            storageBucket: "echoshield-38f36.firebasestorage.app",
+            messagingSenderId: "747286927373",
+            appId: "1:747286927373:web:5c4029593703bb08d6dd44",
+            measurementId: "G-KDCDBN5KGS"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        // ---------- Authentication Check ----------
+        auth.onAuthStateChanged(async (user) => {
+            if (!user) {
+                window.location.href = 'signin.html';
+                return;
+            }
+            // Display user email
+            document.getElementById('userEmail').textContent = user.email;
+            // Fetch history
+            loadHistory(user.uid);
+        });
+
+        // Logout
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            auth.signOut().then(() => window.location.href = 'signin.html');
+        });
+
+        // ---------- Simulation ----------
+        const simError = document.getElementById('simError');
+        const simLoading = document.getElementById('simLoading');
+        const simResults = document.getElementById('simResults');
+
+        document.getElementById('runSimBtn').addEventListener('click', async () => {
+            const protocol = document.getElementById('protocolSelect').value;
+            simError.style.display = 'none';
+            simLoading.style.display = 'block';
+            simResults.style.display = 'none';
+
+            try {
+                const user = auth.currentUser;
+                if (!user) throw new Error('Not authenticated');
+                const idToken = await user.getIdToken();
+
+                // Call backend simulation API (adjust URL to your deployed backend)
+                const API_BASE = 'https://api.cephasgm.org';  // or localhost during dev
+                const response = await fetch(`${API_BASE}/api/simulate`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${idToken}`
+                    },
+                    body: JSON.stringify({ protocol })
+                });
+
+                if (!response.ok) {
+                    const errData = await response.json();
+                    throw new Error(errData.error || 'Simulation failed');
+                }
+
+                const data = await response.json();
+                displayResults(data);
+
+                // Log simulation to Firestore (client-side for immediate user history)
+                await db.collection('simulations').add({
+                    userId: user.uid,
+                    userEmail: user.email,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                    protocolRequested: protocol,
+                    detectedProtocol: data.detected_protocol,
+                    confidence: data.confidence,
+                    jammingParams: data.jamming
+                });
+
+                // Refresh history
+                loadHistory(user.uid);
+
+            } catch (error) {
+                simError.textContent = error.message;
+                simError.style.display = 'block';
+            } finally {
+                simLoading.style.display = 'none';
+            }
+        });
+
+        function displayResults(data) {
+            document.getElementById('detectedProtocol').textContent = data.detected_protocol.toUpperCase();
+            document.getElementById('confidence').textContent = (data.confidence * 100).toFixed(1) + '%';
+            const jam = data.jamming;
+            document.getElementById('jamFreq').textContent = (jam.center_freq_hz / 1e6).toFixed(2) + ' MHz';
+            document.getElementById('jamBW').textContent = (jam.bandwidth_hz / 1e3).toFixed(1) + ' kHz';
+            document.getElementById('jamMod').textContent = jam.modulation.replace('_', ' ');
+            document.getElementById('jamPower').textContent = jam.power_dbm + ' dBm';
+
+            // Spectrogram image
+            const img = document.getElementById('spectrogramImg');
+            if (data.spectrogram_url) {
+                img.src = `https://api.cephasgm.org${data.spectrogram_url}`;  // backend serves the image
+                img.style.display = 'block';
+            } else {
+                img.style.display = 'none';
+            }
+
+            simResults.style.display = 'block';
+        }
+
+        // ---------- History from Firestore ----------
+        async function loadHistory(uid) {
+            const container = document.getElementById('historyContainer');
+            try {
+                const snapshot = await db.collection('simulations')
+                    .where('userId', '==', uid)
+                    .orderBy('timestamp', 'desc')
+                    .limit(10)
+                    .get();
+
+                if (snapshot.empty) {
+                    container.innerHTML = '<p style="color:#94a3b8;">No simulations run yet.</p>';
+                    return;
+                }
+
+                let html = `
+                    <table class="history-table">
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>Requested</th>
+                                <th>Detected</th>
+                                <th>Confidence</th>
+                                <th>Jamming Type</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+                snapshot.forEach(doc => {
+                    const d = doc.data();
+                    const time = d.timestamp ? d.timestamp.toDate().toLocaleString() : 'Just now';
+                    html += `
+                        <tr>
+                            <td>${time}</td>
+                            <td>${d.protocolRequested.toUpperCase()}</td>
+                            <td>${d.detectedProtocol.toUpperCase()}</td>
+                            <td>${(d.confidence * 100).toFixed(0)}%</td>
+                            <td>${d.jammingParams.modulation.replace('_', ' ')}</td>
+                        </tr>
+                    `;
+                });
+                html += '</tbody></table>';
+                container.innerHTML = html;
+            } catch (error) {
+                container.innerHTML = `<p style="color:#f87171;">Error loading history: ${error.message}</p>`;
+            }
+        }
+
+        // ---------- PWA Service Worker ----------
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(reg => console.log('SW registered'))
+                    .catch(err => console.error('SW failed', err));
+            });
+        }
+    </script>
+</body>
+</html>
