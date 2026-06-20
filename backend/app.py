@@ -12,6 +12,8 @@ import firebase_admin
 from firebase_admin import credentials, firestore, auth
 
 app = Flask(__name__)
+
+# ---------- CORS: Allow the frontend domain ----------
 CORS(app, resources={r"/api/*": {"origins": "https://echoshield.cephasgm.org"}})
 
 # ---------- Firebase Initialisation ----------
@@ -23,7 +25,7 @@ else:
 firebase_admin.initialize_app(cred)
 db = firestore.client()
 
-# ---------- Placeholder PNG generator ----------
+# ---------- Placeholder PNG generator (pure Python) ----------
 def create_placeholder_png():
     def chunk(chunk_type, data):
         c = chunk_type + data
@@ -43,6 +45,7 @@ PLACEHOLDER_PNG = create_placeholder_png()
 from simulator import generate_iq_and_spectrogram
 from ai_model import classify_spectrogram, generate_jamming_signal
 
+# ---------- Helper: verify Firebase token ----------
 def verify_token(request):
     auth_header = request.headers.get('Authorization')
     if not auth_header or not auth_header.startswith('Bearer '):
@@ -53,6 +56,28 @@ def verify_token(request):
         return decoded_token['uid'], None
     except Exception as e:
         return None, str(e)
+
+# ---------- Global error handler: ensures CORS on all errors ----------
+@app.errorhandler(Exception)
+def handle_exception(e):
+    err_trace = traceback.format_exc()
+    print(err_trace)
+    response = jsonify({
+        'error': str(e),
+        'trace': err_trace.split('\n')[-2] if '\n' in err_trace else str(e)
+    })
+    response.status_code = 500
+    # Ensure CORS headers
+    response.headers['Access-Control-Allow-Origin'] = 'https://echoshield.cephasgm.org'
+    response.headers['Access-Control-Allow-Headers'] = 'Authorization, Content-Type'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+    response.headers['Access-Control-Allow-Credentials'] = 'true'
+    return response
+
+# ---------- Routes ----------
+@app.route('/api/test', methods=['GET', 'POST'])
+def test():
+    return jsonify({'message': 'Backend is reachable!'})
 
 @app.route('/api/simulate', methods=['POST'])
 def simulate():
@@ -71,7 +96,7 @@ def simulate():
         if protocol not in ['wifi', 'lora', 'dji']:
             return jsonify({'error': 'Invalid protocol. Choose wifi, lora, or dji.'}), 400
 
-        # 3. Simulate signal and spectrogram
+        # 3. Simulate
         iq, spectrogram = generate_iq_and_spectrogram(protocol)
 
         # 4. AI classification
@@ -80,7 +105,7 @@ def simulate():
         # 5. Jamming parameters
         jamming_params = generate_jamming_signal(predicted_class)
 
-        # 6. Log to Firestore (if available)
+        # 6. Log to Firestore
         if db:
             try:
                 db.collection('simulations').add({
@@ -105,11 +130,11 @@ def simulate():
     except Exception as e:
         err_trace = traceback.format_exc()
         print(err_trace)
-        # Return 200 even on error so the browser can show it (CORS is already set)
+        # Return 200 so the browser can read the error
         return jsonify({
             'error': str(e),
             'trace': err_trace.split('\n')[-2] if '\n' in err_trace else str(e)
-        }), 200   # <-- 200 instead of 500
+        }), 200
 
 @app.route('/api/spectrogram/<filename>')
 def get_spectrogram(filename):
@@ -124,6 +149,7 @@ def get_spectrogram(filename):
 def health():
     return jsonify({'status': 'ok'})
 
+# ---------- Safety net: add CORS headers to every response ----------
 @app.after_request
 def add_cors_headers(response):
     response.headers['Access-Control-Allow-Origin'] = 'https://echoshield.cephasgm.org'
