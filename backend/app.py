@@ -16,7 +16,7 @@ from simulator import generate_iq_and_spectrogram
 from ai_model import classify_spectrogram, generate_jamming_signal
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r"/api/*": {"origins": "https://echoshield.cephasgm.org"}}, supports_credentials=True)
 
 # ---------- Firebase Admin Initialisation ----------
 secret_path = '/etc/secrets/firebase-service-account.json'
