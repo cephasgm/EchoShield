@@ -331,7 +331,7 @@
                 const idToken = await user.getIdToken();
 
                 // Call backend simulation API (adjust URL to your deployed backend)
-                const API_BASE = 'https://api.cephasgm.org';  // or localhost during dev
+                const API_BASE = 'https://echoshield-api-4x6z.onrender.com';
                 const response = await fetch(`${API_BASE}/api/simulate`, {
                     method: 'POST',
                     headers: {
