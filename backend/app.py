@@ -23,7 +23,7 @@ else:
 firebase_admin.initialize_app(cred)
 db = firestore.client()
 
-# ---------- Placeholder PNG generator (pure Python) ----------
+# ---------- Placeholder PNG generator ----------
 def create_placeholder_png():
     def chunk(chunk_type, data):
         c = chunk_type + data
@@ -104,12 +104,15 @@ def simulate():
 
     except Exception as e:
         err_trace = traceback.format_exc()
-        print(err_trace)  # visible in Render logs
-        return jsonify({'error': str(e), 'trace': err_trace.split('\n')[-2]}), 500
+        print(err_trace)
+        # Return 200 even on error so the browser can show it (CORS is already set)
+        return jsonify({
+            'error': str(e),
+            'trace': err_trace.split('\n')[-2] if '\n' in err_trace else str(e)
+        }), 200   # <-- 200 instead of 500
 
 @app.route('/api/spectrogram/<filename>')
 def get_spectrogram(filename):
-    """Serve the placeholder PNG."""
     return send_file(
         io.BytesIO(PLACEHOLDER_PNG),
         mimetype='image/png',
@@ -121,7 +124,6 @@ def get_spectrogram(filename):
 def health():
     return jsonify({'status': 'ok'})
 
-# ---------- Global CORS headers (safety net) ----------
 @app.after_request
 def add_cors_headers(response):
     response.headers['Access-Control-Allow-Origin'] = 'https://echoshield.cephasgm.org'
