@@ -73,6 +73,14 @@
             background: transparent;
         }
         .btn-danger:hover { background: rgba(248,113,113,0.15); }
+        .btn-refresh {
+            background: #4da8da;
+            color: #0b0f17;
+            margin-left: 0.5rem;
+            padding: 0.25rem 0.6rem;
+            font-size: 0.7rem;
+        }
+        .btn-refresh:hover { background: #3c8dbc; }
 
         main {
             flex: 1;
@@ -112,7 +120,6 @@
             cursor: pointer;
             font-size: 0.75rem;
         }
-        .map-toggle-btn:hover { background: rgba(77,168,218,0.2); }
 
         #rightCol {
             display: flex;
@@ -136,30 +143,16 @@
         .result-item .label { font-size: 0.7rem; color: #94a3b8; }
         .result-item .value { font-size: 0.9rem; font-weight: 600; color: #fff; }
 
-        .alert-badge {
-            background: #f87171;
-            color: white;
-            padding: 0.2rem 0.6rem;
-            border-radius: 4px;
-            font-size: 0.8rem;
+        .connection-indicator {
             display: inline-block;
-            margin-bottom: 0.5rem;
-            animation: pulse 1s infinite;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 0.3rem;
         }
-        .friendly-badge {
-            background: #22c55e;
-            color: white;
-            padding: 0.2rem 0.6rem;
-            border-radius: 4px;
-            font-size: 0.8rem;
-            display: inline-block;
-            margin-bottom: 0.5rem;
-        }
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.5; }
-            100% { opacity: 1; }
-        }
+        .conn-live { background: #22c55e; }
+        .conn-polling { background: #f59e0b; }
+        .conn-dead { background: #ef4444; }
 
         .history-table {
             width: 100%;
@@ -196,12 +189,13 @@
         <a href="index.html" class="logo"><i class="fas fa-shield-alt"></i> CephasGM<span>|EchoShield</span></a>
         <div class="user-area">
             <span id="userEmail"></span>
+            <button class="btn btn-outline btn-refresh" id="refreshBtn"><i class="fas fa-sync-alt"></i> Refresh</button>
             <button class="btn btn-danger" id="logoutBtn">Logout</button>
         </div>
     </header>
 
     <main>
-        <!-- Map (left) -->
+        <!-- Map -->
         <div class="card" id="mapCard">
             <h2><i class="fas fa-satellite-dish"></i> <span>Tactical Radar</span> View</h2>
             <button class="map-toggle-btn" id="toggleSatellite">🛰 Satellite</button>
@@ -210,12 +204,12 @@
 
         <!-- Right column -->
         <div id="rightCol">
+            <!-- Detection Report -->
             <div class="card" id="resultsCard">
                 <h2><span>Detection</span> Report</h2>
                 <div id="detectionContent">
                     <p id="detectionStatus" style="color:#94a3b8;">Awaiting EchoShield hardware...</p>
                     <div id="reportDetails" style="display:none;">
-                        <div id="badgeContainer"></div>
                         <div class="result-grid">
                             <div class="result-item"><div class="label">Contact</div><div class="value" id="contactType">-</div></div>
                             <div class="result-item"><div class="label">Confidence</div><div class="value" id="confidence">-</div></div>
@@ -229,8 +223,14 @@
                 </div>
             </div>
 
+            <!-- Command Center -->
             <div class="card" id="commandCenter">
-                <h2><span>Command</span> Center</h2>
+                <h2><span>Command</span> Center
+                    <span style="font-size:0.7rem; margin-left:0.5rem;">
+                        <span class="connection-indicator conn-live" id="connDot"></span>
+                        <span id="connLabel" style="color:#22c55e;">LIVE</span>
+                    </span>
+                </h2>
                 <div class="result-grid">
                     <div class="result-item">
                         <div class="label">SYSTEM STATUS</div>
@@ -259,6 +259,7 @@
                 </div>
             </div>
 
+            <!-- Mission History -->
             <div class="card" id="historyCard">
                 <h2><span>Mission</span> History</h2>
                 <div id="historyContainer"><p style="color:#94a3b8;">Loading...</p></div>
@@ -278,6 +279,7 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <script>
+        // ===================== FIREBASE INIT =====================
         const firebaseConfig = {
             apiKey: "AIzaSyCM_7S0zPDz4G2xzlevL3pwj7U0pYih-Zk",
             authDomain: "echoshield-38f36.firebaseapp.com",
@@ -292,23 +294,31 @@
         const db = firebase.firestore();
         const API_BASE = 'https://echoshield-api-4x6z.onrender.com';
 
+        // ===================== STATE =====================
         let lastDetectionTimestamp = 0;
         let lastHardwarePing = Date.now();
+        let listenerUnsubscribe = null;
+        let pollingInterval = null;
+        let isListenerActive = false;
 
+        // ===================== AUTH =====================
         auth.onAuthStateChanged(async (user) => {
             if (!user) { window.location.href = 'signin.html'; return; }
             document.getElementById('userEmail').textContent = user.email;
-            loadHistory();
-            updateStatistics();
-            listenForDetections();
             initMap();
+            fetchLatestAndUpdate();  // immediate fetch
+            startDataPipeline();     // try listener, fallback to polling
         });
 
         document.getElementById('logoutBtn').addEventListener('click', () => {
             auth.signOut().then(() => window.location.href = 'signin.html');
         });
 
-        // ---------- Map & Radar ----------
+        document.getElementById('refreshBtn').addEventListener('click', () => {
+            fetchLatestAndUpdate();
+        });
+
+        // ===================== MAP & RADAR =====================
         let map, userMarker, rangeCircle, sweepLine;
         let threatMarkers = [];
         let sweepAngle = 0;
@@ -317,10 +327,7 @@
         let isSatellite = false;
 
         function initMap() {
-            if (!navigator.geolocation) {
-                alert('Geolocation not supported');
-                return;
-            }
+            if (!navigator.geolocation) return;
             navigator.geolocation.getCurrentPosition(
                 (pos) => {
                     const lat = pos.coords.latitude;
@@ -328,12 +335,8 @@
                     map = L.map('leafletMap', {
                         center: [lat, lon], zoom: 15, zoomControl: true, attributionControl: false
                     });
-                    darkLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-                        maxZoom: 19
-                    }).addTo(map);
-                    satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-                        maxZoom: 19
-                    });
+                    darkLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(map);
+                    satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 });
                     const userIcon = L.divIcon({
                         className: 'custom-icon',
                         html: '<i class="fas fa-shield-alt" style="color:#4da8da; font-size:24px; filter: drop-shadow(0 0 8px #4da8da);"></i>',
@@ -346,20 +349,12 @@
                     sweepLine = L.polyline([], { color: '#4da8da', weight: 2, opacity: 0.7 }).addTo(map);
                     startSweep();
                 },
-                (err) => {
-                    map = L.map('leafletMap', {
-                        center: [-6.8, 39.2], zoom: 13, zoomControl: true, attributionControl: false
-                    });
-                    darkLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-                        maxZoom: 19
-                    }).addTo(map);
-                    satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-                        maxZoom: 19
-                    });
+                () => {
+                    map = L.map('leafletMap', { center: [-6.8, 39.2], zoom: 13, zoomControl: true, attributionControl: false });
+                    darkLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(map);
+                    satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 });
                     userMarker = L.marker([-6.8, 39.2]).addTo(map).bindPopup('Default location').openPopup();
-                    rangeCircle = L.circle([-6.8, 39.2], {
-                        radius: 500, color: '#4da8da', weight: 1, fillOpacity: 0.05, dashArray: '4,4'
-                    }).addTo(map);
+                    rangeCircle = L.circle([-6.8, 39.2], { radius: 500, color: '#4da8da', weight: 1, fillOpacity: 0.05, dashArray: '4,4' }).addTo(map);
                     sweepLine = L.polyline([], { color: '#4da8da', weight: 2, opacity: 0.7 }).addTo(map);
                     startSweep();
                 },
@@ -371,25 +366,19 @@
             if (!map) return;
             isSatellite = !isSatellite;
             if (isSatellite) {
-                map.removeLayer(darkLayer);
-                map.addLayer(satelliteLayer);
+                map.removeLayer(darkLayer); map.addLayer(satelliteLayer);
                 this.innerHTML = '🗺 Map';
             } else {
-                map.removeLayer(satelliteLayer);
-                map.addLayer(darkLayer);
+                map.removeLayer(satelliteLayer); map.addLayer(darkLayer);
                 this.innerHTML = '🛰 Satellite';
             }
         });
 
         function startSweep() {
             function animate() {
-                if (!map || !userMarker) {
-                    animationId = requestAnimationFrame(animate);
-                    return;
-                }
+                if (!map || !userMarker) { animationId = requestAnimationFrame(animate); return; }
                 const center = userMarker.getLatLng();
-                const radiusMeters = rangeCircle.getRadius();
-                const endLatLng = destinationPoint(center, sweepAngle, radiusMeters);
+                const endLatLng = destinationPoint(center, sweepAngle, rangeCircle.getRadius());
                 sweepLine.setLatLngs([center, endLatLng]);
                 sweepAngle += 0.5;
                 if (sweepAngle >= 360) sweepAngle -= 360;
@@ -399,179 +388,251 @@
         }
 
         function destinationPoint(center, bearingDeg, distanceM) {
-            const R = 6371000;
-            const d = distanceM / R;
-            const lat1 = center.lat * Math.PI / 180;
-            const lon1 = center.lng * Math.PI / 180;
+            const R = 6371000, d = distanceM / R;
+            const lat1 = center.lat * Math.PI / 180, lon1 = center.lng * Math.PI / 180;
             const brng = bearingDeg * Math.PI / 180;
             const lat2 = Math.asin(Math.sin(lat1) * Math.cos(d) + Math.cos(lat1) * Math.sin(d) * Math.cos(brng));
-            const lon2 = lon1 + Math.atan2(Math.sin(brng) * Math.sin(d) * Math.cos(lat1),
-                                            Math.cos(d) - Math.sin(lat1) * Math.sin(lat2));
+            const lon2 = lon1 + Math.atan2(Math.sin(brng) * Math.sin(d) * Math.cos(lat1), Math.cos(d) - Math.sin(lat1) * Math.sin(lat2));
             return L.latLng(lat2 * 180 / Math.PI, lon2 * 180 / Math.PI);
         }
 
+        // ===================== AUDIO =====================
         function playAlertSound() {
             try {
-                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                const now = audioCtx.currentTime;
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const now = ctx.currentTime;
                 for (let i = 0; i < 3; i++) {
-                    const osc = audioCtx.createOscillator();
-                    const gain = audioCtx.createGain();
+                    const osc = ctx.createOscillator(), gain = ctx.createGain();
                     osc.type = 'square';
                     osc.frequency.value = 880 + i * 200;
                     gain.gain.setValueAtTime(0.3, now + i * 0.15);
                     gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.15 + 0.1);
-                    osc.connect(gain);
-                    gain.connect(audioCtx.destination);
-                    osc.start(now + i * 0.15);
-                    osc.stop(now + i * 0.15 + 0.12);
+                    osc.connect(gain); gain.connect(ctx.destination);
+                    osc.start(now + i * 0.15); osc.stop(now + i * 0.15 + 0.12);
                 }
             } catch (e) {}
         }
 
-        // ---------- Real‑time Listener (NO composite index required) ----------
-        function listenForDetections() {
-            // Only filter by source, NO orderBy/limit – client-side sorting handles the rest
-            db.collection('simulations')
-                .where('source', '==', 'arduino')
+        // ===================== DATA PIPELINE =====================
+        function setConnectionStatus(mode) {
+            const dot = document.getElementById('connDot');
+            const label = document.getElementById('connLabel');
+            dot.className = 'connection-indicator';
+            if (mode === 'live') {
+                dot.classList.add('conn-live');
+                label.textContent = 'LIVE';
+                label.style.color = '#22c55e';
+            } else if (mode === 'polling') {
+                dot.classList.add('conn-polling');
+                label.textContent = 'POLLING';
+                label.style.color = '#f59e0b';
+            } else {
+                dot.classList.add('conn-dead');
+                label.textContent = 'OFFLINE';
+                label.style.color = '#ef4444';
+            }
+        }
+
+        // Try real-time listener first; if it fails, fall back to polling
+        function startDataPipeline() {
+            // Clean up any existing
+            if (listenerUnsubscribe) { listenerUnsubscribe(); listenerUnsubscribe = null; }
+            if (pollingInterval) { clearInterval(pollingInterval); pollingInterval = null; }
+
+            console.log('🔌 Attempting real-time Firestore listener...');
+            
+            // Use a simple query – NO orderBy, NO where on source (fetch all, filter client-side)
+            // This avoids ALL index requirements
+            listenerUnsubscribe = db.collection('simulations')
                 .onSnapshot(
                     (snapshot) => {
-                        console.log("Snapshot received, docs:", snapshot.size);
-                        // Find the latest document by timestamp
-                        let latestDoc = null;
-                        let latestTime = 0;
-                        snapshot.forEach((doc) => {
-                            const data = doc.data();
-                            const ts = data.timestamp ? data.timestamp.toMillis() : 0;
-                            if (ts > latestTime) {
-                                latestTime = ts;
-                                latestDoc = doc;
-                            }
-                        });
-                        if (!latestDoc) return;
-
-                        const data = latestDoc.data();
-                        console.log("LIVE FIRESTORE EVENT", data);
-
-                        const ts = latestTime;
-                        if (ts <= lastDetectionTimestamp) return;
-                        lastDetectionTimestamp = ts;
-
-                        // Update hardware ping time for system status
-                        lastHardwarePing = Date.now();
-                        document.getElementById('systemStatus').textContent = 'HARDWARE ONLINE';
-
-                        // Command Center updates
-                        document.getElementById('liveDistance').textContent =
-                            (data.distance_cm || '---') + ' cm';
-                        document.getElementById('lastTarget').textContent =
-                            mapDroneName(data.detectedProtocol || 'wifi');
-
-                        const threatElement = document.getElementById('threatLevel');
-                        threatElement.textContent = data.zone || 'CLEAR';
-                        const colorMap = {
-                            CLEAR: '#22c55e',
-                            MONITOR: '#3b82f6',
-                            WARNING: '#f59e0b',
-                            THREAT: '#ef4444'
-                        };
-                        threatElement.style.color = colorMap[data.zone] || '#fff';
-
-                        // Detection Report updates
-                        document.getElementById('detectionStatus').style.display = 'none';
-                        document.getElementById('reportDetails').style.display = 'block';
-                        document.getElementById('contactType').textContent =
-                            mapDroneName(data.detectedProtocol || 'wifi');
-                        document.getElementById('confidence').textContent =
-                            ((data.confidence || 0) * 100).toFixed(1) + '%';
-                        document.getElementById('jamType').textContent =
-                            data.jammingParams ? mapJamName(data.jammingParams.modulation) : 'None';
-                        document.getElementById('jamFreq').textContent =
-                            data.jammingParams ? (data.jammingParams.center_freq_hz / 1e6).toFixed(2) + ' MHz' : '---';
-                        document.getElementById('jamBW').textContent =
-                            data.jammingParams ? (data.jammingParams.bandwidth_hz / 1e3).toFixed(1) + ' kHz' : '---';
-                        document.getElementById('jamPower').textContent =
-                            data.jammingParams ? data.jammingParams.power_dbm + ' dBm' : '---';
-
-                        // Map: draw threat marker
-                        if (map && userMarker) {
-                            const pos = userMarker.getLatLng();
-                            const threatIcon = L.divIcon({
-                                className: 'threat-icon',
-                                html: (data.zone === 'THREAT') 
-                                    ? '<i class="fas fa-fighter-jet" style="color:#f87171; font-size:20px;"></i>'
-                                    : '<i class="fas fa-exclamation-circle" style="color:#f59e0b; font-size:20px;"></i>',
-                                iconSize: [24,24], iconAnchor: [12,12]
-                            });
-                            const marker = L.marker(pos, { icon: threatIcon }).addTo(map);
-                            threatMarkers.push(marker);
-                            setTimeout(() => {
-                                map.removeLayer(marker);
-                                threatMarkers = threatMarkers.filter(m => m !== marker);
-                            }, 10000);
-                        }
-
-                        // Alert only on confirmed THREAT
-                        if (data.zone === 'THREAT' && data.threat === true) {
-                            playAlertSound();
-                        }
-
-                        loadHistory();
-                        updateStatistics();
+                        isListenerActive = true;
+                        setConnectionStatus('live');
+                        console.log('📡 Listener snapshot received, docs:', snapshot.size);
+                        processSnapshot(snapshot);
                     },
                     (error) => {
-                        console.error("Listener Error:", error);
+                        console.error('❌ Listener error:', error.message);
+                        console.log('⚠️ Falling back to polling...');
+                        isListenerActive = false;
+                        setConnectionStatus('polling');
+                        // Fall back to polling every 5 seconds
+                        if (listenerUnsubscribe) { listenerUnsubscribe(); listenerUnsubscribe = null; }
+                        if (!pollingInterval) {
+                            pollingInterval = setInterval(() => {
+                                console.log('🔄 Polling for new data...');
+                                fetchLatestAndUpdate();
+                            }, 5000);
+                        }
                     }
                 );
         }
 
-        // ---------- Statistics ----------
+        function processSnapshot(snapshot) {
+            // Find the latest arduino document
+            let latestDoc = null;
+            let latestTime = 0;
+            
+            snapshot.forEach((doc) => {
+                const data = doc.data();
+                // Only care about arduino source
+                if (data.source !== 'arduino') return;
+                
+                const ts = data.timestamp ? data.timestamp.toMillis() : 0;
+                if (ts > latestTime) {
+                    latestTime = ts;
+                    latestDoc = doc;
+                }
+            });
+
+            if (!latestDoc) {
+                console.log('📡 No arduino documents found in snapshot');
+                return;
+            }
+
+            const data = latestDoc.data();
+            console.log('📡 Latest arduino document:', {
+                distance_cm: data.distance_cm,
+                zone: data.zone,
+                threat: data.threat,
+                timestamp: new Date(latestTime).toLocaleTimeString()
+            });
+
+            if (latestTime <= lastDetectionTimestamp) {
+                console.log('⏭️ Already processed this detection');
+                return;
+            }
+            lastDetectionTimestamp = latestTime;
+
+            applyDetectionData(data);
+            loadHistory();
+            updateStatistics();
+        }
+
+        // Fallback: fetch all simulations, filter client-side
+        async function fetchLatestAndUpdate() {
+            try {
+                console.log('🔍 Fetching all simulations...');
+                const snapshot = await db.collection('simulations').get();
+                console.log('🔍 Fetched', snapshot.size, 'total documents');
+                
+                // Find the latest arduino document
+                let latestData = null;
+                let latestTime = 0;
+                
+                snapshot.forEach((doc) => {
+                    const data = doc.data();
+                    if (data.source !== 'arduino') return;
+                    
+                    const ts = data.timestamp ? data.timestamp.toMillis() : 0;
+                    if (ts > latestTime) {
+                        latestTime = ts;
+                        latestData = data;
+                    }
+                });
+
+                if (!latestData) {
+                    console.log('🔍 No arduino documents found in Firestore');
+                    return;
+                }
+
+                console.log('🔍 Latest arduino data:', {
+                    distance_cm: latestData.distance_cm,
+                    zone: latestData.zone,
+                    threat: latestData.threat
+                });
+
+                if (latestTime > lastDetectionTimestamp) {
+                    lastDetectionTimestamp = latestTime;
+                    applyDetectionData(latestData);
+                    loadHistory();
+                    updateStatistics();
+                }
+            } catch (e) {
+                console.error('❌ Fetch error:', e.message);
+            }
+        }
+
+        function applyDetectionData(data) {
+            console.log('✅ Applying detection data to dashboard');
+
+            // Hardware ping
+            lastHardwarePing = Date.now();
+            document.getElementById('systemStatus').textContent = 'HARDWARE ONLINE';
+
+            // Command Center
+            document.getElementById('liveDistance').textContent = (data.distance_cm || '---') + ' cm';
+            document.getElementById('lastTarget').textContent = mapDroneName(data.detectedProtocol || 'wifi');
+
+            const threatEl = document.getElementById('threatLevel');
+            threatEl.textContent = data.zone || 'CLEAR';
+            const colors = { CLEAR: '#22c55e', MONITOR: '#3b82f6', WARNING: '#f59e0b', THREAT: '#ef4444' };
+            threatEl.style.color = colors[data.zone] || '#fff';
+
+            // Detection Report
+            document.getElementById('detectionStatus').style.display = 'none';
+            document.getElementById('reportDetails').style.display = 'block';
+            document.getElementById('contactType').textContent = mapDroneName(data.detectedProtocol || 'wifi');
+            document.getElementById('confidence').textContent = ((data.confidence || 0) * 100).toFixed(1) + '%';
+            
+            const jam = data.jammingParams;
+            document.getElementById('jamType').textContent = jam ? mapJamName(jam.modulation) : 'None';
+            document.getElementById('jamFreq').textContent = jam ? (jam.center_freq_hz / 1e6).toFixed(2) + ' MHz' : '---';
+            document.getElementById('jamBW').textContent = jam ? (jam.bandwidth_hz / 1e3).toFixed(1) + ' kHz' : '---';
+            document.getElementById('jamPower').textContent = jam ? jam.power_dbm + ' dBm' : '---';
+
+            // Map marker
+            if (map && userMarker) {
+                const pos = userMarker.getLatLng();
+                const isThreat = (data.zone === 'THREAT' && data.threat === true);
+                const icon = L.divIcon({
+                    className: 'threat-icon',
+                    html: isThreat
+                        ? '<i class="fas fa-fighter-jet" style="color:#f87171; font-size:20px;"></i>'
+                        : '<i class="fas fa-exclamation-circle" style="color:#f59e0b; font-size:20px;"></i>',
+                    iconSize: [24,24], iconAnchor: [12,12]
+                });
+                const marker = L.marker(pos, { icon }).addTo(map);
+                threatMarkers.push(marker);
+                setTimeout(() => {
+                    map.removeLayer(marker);
+                    threatMarkers = threatMarkers.filter(m => m !== marker);
+                }, 10000);
+            }
+
+            // Alert
+            if (data.zone === 'THREAT' && data.threat === true) {
+                playAlertSound();
+            }
+        }
+
+        // ===================== STATISTICS =====================
         async function updateStatistics() {
             try {
-                const snapshot = await db.collection('simulations')
-                    .where('source', '==', 'arduino')
-                    .get();
+                const snapshot = await db.collection('simulations').get();
                 let detections = 0, neutralized = 0;
                 snapshot.forEach(doc => {
                     const d = doc.data();
+                    if (d.source !== 'arduino') return;
                     detections++;
                     if (d.threat) neutralized++;
                 });
                 document.getElementById('detectionsToday').textContent = detections;
                 document.getElementById('threatsNeutralized').textContent = neutralized;
             } catch (e) {
-                console.error('Statistics error:', e);
+                console.error('Stats error:', e);
             }
         }
 
-        // ---------- System Status Watchdog ----------
-        setInterval(() => {
-            const age = Date.now() - lastHardwarePing;
-            if (age > 30000) {
-                document.getElementById('systemStatus').textContent = 'HARDWARE OFFLINE';
-            }
-        }, 5000);
-
-        function mapDroneName(p) {
-            const names = { wifi: 'Consumer Drone', lora: 'Long‑Range FPV', dji: 'Tactical UAV' };
-            return names[p] || p.toUpperCase();
-        }
-        function mapJamName(m) {
-            const names = { wideband_noise: 'Wideband Barrage', chirp_jammer: 'Chirp Disruptor', sweeping_tone: 'Sweeping Jammer' };
-            return names[m] || m.replace('_', ' ');
-        }
-
-        // ---------- History (client‑side sort, NO composite index needed) ----------
+        // ===================== HISTORY =====================
         async function loadHistory() {
             const container = document.getElementById('historyContainer');
             try {
-                const snapshot = await db.collection('simulations')
-                    .where('source', '==', 'arduino')
-                    .get();
-
-                // Convert to array and sort by timestamp descending
+                const snapshot = await db.collection('simulations').get();
                 const docs = [];
-                snapshot.forEach(doc => docs.push(doc));
+                snapshot.forEach(doc => {
+                    if (doc.data().source === 'arduino') docs.push(doc);
+                });
                 docs.sort((a, b) => {
                     const ta = a.data().timestamp ? a.data().timestamp.toMillis() : 0;
                     const tb = b.data().timestamp ? b.data().timestamp.toMillis() : 0;
@@ -583,27 +644,48 @@
                     return;
                 }
 
-                // Show top 5
                 let html = `<table class="history-table">
-                    <thead><tr><th>Time</th><th>Target</th><th>Action</th><th>Conf</th></tr></thead><tbody>`;
+                    <thead><tr><th>Time</th><th>Target</th><th>Dist</th><th>Zone</th><th>Action</th></tr></thead><tbody>`;
                 docs.slice(0, 5).forEach(doc => {
                     const d = doc.data();
                     const time = d.timestamp ? d.timestamp.toDate().toLocaleTimeString() : 'Now';
+                    const jam = d.jammingParams;
                     html += `<tr>
                         <td>${time}</td>
                         <td>${mapDroneName(d.detectedProtocol || 'wifi')}</td>
-                        <td>${mapJamName((d.jammingParams && d.jammingParams.modulation) || 'wideband_noise')}</td>
-                        <td>${((d.confidence || 0)*100).toFixed(0)}%</td>
+                        <td>${d.distance_cm || '---'} cm</td>
+                        <td style="color:${({CLEAR:'#22c55e',MONITOR:'#3b82f6',WARNING:'#f59e0b',THREAT:'#ef4444'})[d.zone] || '#fff'}">${d.zone || '---'}</td>
+                        <td>${jam ? mapJamName(jam.modulation) : 'None'}</td>
                     </tr>`;
                 });
                 html += '</tbody></table>';
                 container.innerHTML = html;
             } catch (e) {
-                container.innerHTML = `<p style="color:#f87171;">Error loading history: ${e.message}</p>`;
+                container.innerHTML = `<p style="color:#f87171;">Error: ${e.message}</p>`;
             }
         }
 
-        // PWA
+        // ===================== WATCHDOG =====================
+        setInterval(() => {
+            if (Date.now() - lastHardwarePing > 30000) {
+                document.getElementById('systemStatus').textContent = 'HARDWARE OFFLINE';
+                document.getElementById('systemStatus').style.color = '#ef4444';
+            } else {
+                document.getElementById('systemStatus').style.color = '#22c55e';
+            }
+        }, 5000);
+
+        // ===================== HELPERS =====================
+        function mapDroneName(p) {
+            const names = { wifi: 'Consumer Drone', lora: 'Long‑Range FPV', dji: 'Tactical UAV' };
+            return names[p] || p.toUpperCase();
+        }
+        function mapJamName(m) {
+            const names = { wideband_noise: 'Wideband Barrage', chirp_jammer: 'Chirp Disruptor', sweeping_tone: 'Sweeping Jammer' };
+            return names[m] || m.replace('_', ' ');
+        }
+
+        // ===================== PWA =====================
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('/sw.js')
