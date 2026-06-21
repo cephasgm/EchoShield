@@ -236,7 +236,7 @@
                 </div>
             </div>
 
-            <!-- Command Center (NEW) -->
+            <!-- Command Center -->
             <div class="card" id="commandCenter">
                 <h2><span>Command</span> Center</h2>
                 <div class="result-grid">
@@ -309,7 +309,7 @@
             document.getElementById('userEmail').textContent = user.email;
             loadHistory();
             updateStatistics();
-            listenForDetections();   // NEW – real‑time Arduino listener
+            listenForDetections();   // Arduino listener (with timestamp deduplication)
             initMap();
         });
 
@@ -543,7 +543,7 @@
                     document.getElementById('contactType').textContent = mapDroneName(data.detected_protocol);
                     document.getElementById('confidence').textContent = (data.confidence * 100).toFixed(1) + '%';
                     document.getElementById('jamType').textContent = mapJamName(data.jamming.modulation);
-                    playAlertSound();
+                    playAlertSound();   // simulation alert
 
                     db.collection('simulations').add({
                         userId: user.uid,
@@ -553,7 +553,7 @@
                         detectedProtocol: data.detected_protocol,
                         confidence: data.confidence,
                         jammingParams: data.jamming,
-                        source: 'autoscan'        // added source field
+                        source: 'autoscan'
                     });
                     loadHistory();
                     updateStatistics();
@@ -599,7 +599,9 @@
             }
         }
 
-        // ---------- Real‑time Listener for Arduino detections (NEW) ----------
+        // ---------- Real‑time Listener for Arduino detections (FIXED) ----------
+        let lastArduinoTimestamp = Date.now();  // ignore any doc created before page load
+
         function listenForDetections() {
             db.collection('simulations')
                 .where('source', '==', 'arduino')
@@ -609,31 +611,32 @@
                     snapshot.docChanges().forEach((change) => {
                         if (change.type === 'added') {
                             const data = change.doc.data();
+                            const ts = data.timestamp ? data.timestamp.toMillis() : 0;
+
+                            // Ignore if this document is older than or equal to the last processed timestamp
+                            if (ts <= lastArduinoTimestamp) {
+                                return;
+                            }
+                            lastArduinoTimestamp = ts;
 
                             document.getElementById('liveDistance').textContent =
                                 data.distance_cm + ' cm';
-
                             document.getElementById('lastTarget').textContent =
                                 mapDroneName(data.detectedProtocol);
 
                             const threatElement = document.getElementById('threatLevel');
                             threatElement.textContent = data.zone;
-
                             switch(data.zone) {
-                                case 'CLEAR':
-                                    threatElement.style.color = '#22c55e';
-                                    break;
-                                case 'MONITOR':
-                                    threatElement.style.color = '#3b82f6';
-                                    break;
-                                case 'WARNING':
-                                    threatElement.style.color = '#f59e0b';
-                                    break;
-                                case 'THREAT':
-                                    threatElement.style.color = '#ef4444';
-                                    break;
-                                default:
-                                    threatElement.style.color = '#fff';
+                                case 'CLEAR':   threatElement.style.color = '#22c55e'; break;
+                                case 'MONITOR': threatElement.style.color = '#3b82f6'; break;
+                                case 'WARNING': threatElement.style.color = '#f59e0b'; break;
+                                case 'THREAT':  threatElement.style.color = '#ef4444'; break;
+                                default:        threatElement.style.color = '#fff';
+                            }
+
+                            // Sound only for confirmed THREAT with threat flag
+                            if (data.zone === 'THREAT' && data.threat === true) {
+                                playAlertSound();
                             }
 
                             loadHistory();
@@ -643,7 +646,7 @@
                 });
         }
 
-        // ---------- Statistics (NEW) ----------
+        // ---------- Statistics ----------
         async function updateStatistics() {
             try {
                 const snapshot = await db.collection('simulations')
