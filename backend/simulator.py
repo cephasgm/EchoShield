@@ -1,95 +1,120 @@
 import numpy as np
 
-def spectrogram_np(signal, fs, nperseg=256, noverlap=128):
-    """Compute spectrogram using numpy FFT."""
+def spectrogram_np(signal, fs, nperseg=128, noverlap=64):
+    """Lightweight spectrogram implementation."""
     step = nperseg - noverlap
-    num_segments = (len(signal) - noverlap) // step
-    if num_segments <= 0:
+
+    if len(signal) < nperseg:
         return np.array([]), np.array([]), np.array([])
-    
-    freqs = np.fft.rfftfreq(nperseg, 1/fs)
+
+    num_segments = (len(signal) - noverlap) // step
+
+    freqs = np.fft.rfftfreq(nperseg, 1 / fs)
     times = np.arange(num_segments) * step / fs
+
     Sxx = np.zeros((len(freqs), num_segments))
-    
+
     window = np.hanning(nperseg)
+
     for i in range(num_segments):
         start = i * step
-        segment = signal[start:start+nperseg] * window
-        fft_result = np.fft.rfft(segment)
+        segment = signal[start:start + nperseg]
+
+        if len(segment) < nperseg:
+            break
+
+        segment = segment * window
+
+        fft_result = np.fft.rfft(np.real(segment))
         Sxx[:, i] = np.abs(fft_result)
-    
+
     return freqs, times, Sxx
 
-def generate_wifi(duration=0.5, fs=10e6):
-    """Generate OFDM-like Wi‑Fi signal (simplified)."""
-    t = np.arange(0, duration, 1/fs)
-    num_carriers = 64
-    symbol_len = int(fs * duration / num_carriers)
-    symbols = (np.random.randn(num_carriers) + 1j*np.random.randn(num_carriers)) / np.sqrt(2)
-    signal = np.tile(symbols, (symbol_len, 1)).flatten()[:len(t)]
+
+def generate_wifi(duration=0.05, fs=100000):
+    t = np.arange(0, duration, 1 / fs)
+
+    signal = (
+        np.random.randn(len(t))
+        + 1j * np.random.randn(len(t))
+    ) / np.sqrt(2)
+
     return signal
 
-def generate_lora(duration=0.5, fs=1e6):
-    """Generate LoRa chirp signal (SF7)."""
-    t = np.arange(0, duration, 1/fs)
-    BW = 125e3  # 125 kHz
-    f0 = -BW/2
-    f1 = BW/2
+
+def generate_lora(duration=0.05, fs=100000):
+    t = np.arange(0, duration, 1 / fs)
+
+    bw = 10000
+    f0 = -bw / 2
+    f1 = bw / 2
+
     k = (f1 - f0) / duration
-    phase = 2 * np.pi * (f0*t + 0.5*k*t**2)
-    signal = np.exp(1j * phase)
-    return signal
 
-def generate_dji_hopping(duration=0.5, fs=10e6):
-    """Simulate DJI‑style frequency hopping: short bursts at random channels."""
-    channels = np.linspace(2.4e9, 2.483e9, 40)  # 40 channels
-    t = np.arange(0, duration, 1/fs)
+    phase = 2 * np.pi * (f0 * t + 0.5 * k * t**2)
+
+    return np.exp(1j * phase)
+
+
+def generate_dji_hopping(duration=0.05, fs=100000):
+    t = np.arange(0, duration, 1 / fs)
+
     signal = np.zeros(len(t), dtype=complex)
-    hop_rate = 100  # hops per second
-    hop_samples = int(fs / hop_rate)
+
+    hop_rate = 20
+    hop_samples = max(1, int(fs / hop_rate))
+
+    frequencies = np.linspace(5000, 20000, 10)
+
     for i in range(0, len(t), hop_samples):
         end = min(i + hop_samples, len(t))
-        ch = np.random.choice(channels)
-        signal[i:end] = np.exp(2j * np.pi * ch * t[i:end])
+
+        freq = np.random.choice(frequencies)
+
+        signal[i:end] = np.exp(
+            2j * np.pi * freq * t[i:end]
+        )
+
     return signal
 
+
 def generate_iq_and_spectrogram(protocol, duration=0.05):
-"""
-Generate a lightweight demo signal and spectrogram.
-Optimized for Render deployment.
-"""
+    """
+    Render-friendly simulator.
+    ~1000x lighter than the original version.
+    """
 
-if protocol == 'wifi':
-    fs = 100000
-    iq = generate_wifi(duration, fs)
+    if protocol == "wifi":
+        fs = 100000
+        iq = generate_wifi(duration, fs)
 
-elif protocol == 'lora':
-    fs = 100000
-    iq = generate_lora(duration, fs)
+    elif protocol == "lora":
+        fs = 100000
+        iq = generate_lora(duration, fs)
 
-elif protocol == 'dji':
-    fs = 100000
-    iq = generate_dji_hopping(duration, fs)
+    elif protocol == "dji":
+        fs = 100000
+        iq = generate_dji_hopping(duration, fs)
 
-else:
-    raise ValueError('Unknown protocol')
+    else:
+        raise ValueError("Unknown protocol")
 
-f, t_spec, Sxx = spectrogram_np(
-    iq,
-    fs,
-    nperseg=128,
-    noverlap=64
-)
-
-if Sxx.size == 0:
-    Sxx_norm = np.zeros((128, 128))
-else:
-    Sxx_dB = 10 * np.log10(Sxx + 1e-12)
-
-    Sxx_norm = (
-        Sxx_dB - Sxx_dB.min()
-    ) / (
-        Sxx_dB.max() - Sxx_dB.min() + 1e-12
+    _, _, Sxx = spectrogram_np(
+        iq,
+        fs,
+        nperseg=128,
+        noverlap=64
     )
 
-return iq, Sxx_norm
+    if Sxx.size == 0:
+        return iq, np.zeros((128, 128))
+
+    Sxx_db = 10 * np.log10(Sxx + 1e-12)
+
+    Sxx_norm = (
+        Sxx_db - Sxx_db.min()
+    ) / (
+        Sxx_db.max() - Sxx_db.min() + 1e-12
+    )
+
+    return iq, Sxx_norm
