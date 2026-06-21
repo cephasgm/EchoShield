@@ -296,10 +296,10 @@ const API_BASE = 'https://echoshield-api-4x6z.onrender.com';
 db.collection("simulations")
 .get()
 .then((snap) => {
-    alert("Documents found: " + snap.size);
+
 })
 .catch((err) => {
-    alert("Firestore Error: " + err.message);
+
 });
 
         let lastDetectionTimestamp = 0;   // milliseconds
@@ -328,7 +328,7 @@ db.collection("simulations")
 
         function initMap() {
             if (!navigator.geolocation) {
-                alert('Geolocation not supported');
+               
                 return;
             }
             navigator.geolocation.getCurrentPosition(
@@ -442,12 +442,12 @@ db.collection("simulations")
         // ---------- Real‑time Listener (NO composite index needed) ----------
         function listenForDetections() {
             db.collection('simulations')
-                .limit(5)
-                .onSnapshot(
-                    (snapshot) => {
+.orderBy('timestamp', 'desc')
+.limit(5)
+.onSnapshot(...)
                         console.log("Snapshot received, docs:", snapshot.size);
 snapshot.forEach((doc) => {
-                alert(JSON.stringify(doc.data(), null, 2));
+               
             });
 
 
@@ -468,7 +468,6 @@ snapshot.forEach((doc) => {
         latestDoc = doc;
     }
 });
-alert("LATEST TIME = " + latestTime);
 
                         snapshot.forEach((doc) => {
                             const data = doc.data();
