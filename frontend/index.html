@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CephasGM EchoShield – AI Drone Defense</title>
+    <title>EchoShield – Hardware‑Assisted AI Drone Defense | CephasGM</title>
     <meta name="description" content="EchoShield – Hardware‑assisted AI drone detection, threat assessment and countermeasure platform.">
     <meta name="theme-color" content="#0a121f">
     <link rel="manifest" href="manifest.json">
@@ -65,50 +65,52 @@
             transition: 0.3s;
             font-size: 0.85rem;
             display: inline-block;
-        }
-        .btn-outline {
-            border: 1px solid #4da8da;
-            color: #4da8da;
-            background: transparent;
-        }
-        .btn-outline:hover { background: rgba(77,168,218,0.1); }
-        .btn-primary {
             background: #4da8da;
             color: #0b0f17;
         }
-        .btn-primary:hover { background: #3c8dbc; }
+        .btn:hover { background: #3c8dbc; }
 
         main {
             flex: 1;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1rem;
-            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+            padding: 0.8rem;
             max-width: 1200px;
             margin: 0 auto;
             width: 100%;
             overflow: hidden;
         }
         .hero {
-            grid-column: 1 / -1;
             text-align: center;
-            padding: 1rem 1rem 0.5rem;
+            padding: 0.2rem 1rem 0;
         }
-        .hero h1 { font-size: 2rem; font-weight: 800; color: #fff; }
-        .hero h1 span { color: #4da8da; }
-        .hero .subhead { font-size: 1rem; color: #b0c4de; margin-bottom: 0.8rem; }
-        .hero-buttons { display: flex; justify-content: center; gap: 1rem; }
+        .hero .tagline {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #fff;
+        }
+        .hero .tagline span { color: #4da8da; }
 
-        .status-bar {
-            grid-column: 1 / -1;
-            display: flex;
-            justify-content: center;
-            gap: 1.5rem;
+        /* Status & Calendar card */
+        .status-card {
             background: rgba(18, 25, 40, 0.8);
             backdrop-filter: blur(8px);
             border: 1px solid rgba(255,255,255,0.08);
             border-radius: 8px;
-            padding: 0.5rem 1rem;
+            padding: 0.6rem 1rem;
+        }
+        .status-title {
+            font-size: 0.85rem;
+            color: #94a3b8;
+            margin-bottom: 0.4rem;
+        }
+        .status-row {
+            display: flex;
+            justify-content: center;
+            gap: 1.5rem;
+            align-items: center;
+            flex-wrap: wrap;
             font-size: 0.85rem;
         }
         .status-item {
@@ -123,67 +125,93 @@
         }
         .dot-online { background: #22c55e; }
         .dot-offline { background: #ef4444; }
-
-        /* Left column */
-        .left-col {
+        .clock-row {
             display: flex;
-            flex-direction: column;
+            justify-content: center;
+            align-items: center;
             gap: 1rem;
-            overflow-y: auto;
+            margin-top: 0.5rem;
+            font-size: 0.8rem;
         }
-        /* Right column */
-        .right-col {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-            overflow-y: auto;
+        .clock-row select {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.12);
+            color: #fff;
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
         }
 
+        /* Horizontal row of 4 cards */
+        .card-row {
+            display: flex;
+            gap: 0.8rem;
+            flex: 1;
+            min-height: 0;
+        }
         .card {
             background: rgba(18, 25, 40, 0.8);
             backdrop-filter: blur(8px);
             border: 1px solid rgba(255,255,255,0.06);
             border-radius: 8px;
-            padding: 1rem;
+            padding: 0.8rem;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
         }
-        .card h2 { font-size: 1rem; color: #fff; margin-bottom: 0.5rem; }
+        .card h2 { font-size: 0.95rem; color: #fff; margin-bottom: 0.5rem; }
         .card h2 span { color: #4da8da; }
-        .card h3 { font-size: 0.9rem; color: #fff; margin-bottom: 0.5rem; }
+        .card h3 { font-size: 0.85rem; color: #fff; margin-bottom: 0.3rem; }
 
-        /* How It Works (vertical flow compact) */
+        /* How It Works flow */
         .flow-compact {
             display: flex;
             flex-direction: column;
-            gap: 0.2rem;
+            gap: 0.1rem;
+            font-size: 0.72rem;
         }
         .flow-step {
             display: flex;
             align-items: center;
-            gap: 0.5rem;
-            font-size: 0.8rem;
-            padding: 0.25rem 0;
+            gap: 0.3rem;
         }
-        .flow-step i { color: #4da8da; width: 18px; text-align: center; }
-        .flow-arrow { text-align: center; color: #4da8da; font-size: 0.8rem; }
+        .flow-step i { color: #4da8da; width: 14px; text-align: center; }
+        .flow-arrow { text-align: center; color: #4da8da; font-size: 0.65rem; }
 
-        /* Two column grid inside card */
-        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
-        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
-        .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; }
+        /* Architecture list */
+        .arch-list { list-style: none; font-size: 0.72rem; }
+        .arch-list li { padding: 0.1rem 0; display: flex; align-items: center; gap: 0.3rem; }
+        .arch-list li i { color: #4da8da; width: 14px; }
+
+        /* Capabilities grid */
+        .mini-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.4rem;
+        }
         .mini-card {
             background: rgba(255,255,255,0.03);
-            padding: 0.5rem;
-            border-radius: 6px;
-            border: 1px solid rgba(255,255,255,0.06);
-            text-align: center;
-            font-size: 0.8rem;
-        }
-        .mini-card i { color: #4da8da; margin-bottom: 0.3rem; font-size: 1rem; }
-        .zone-item {
             padding: 0.4rem;
             border-radius: 4px;
+            border: 1px solid rgba(255,255,255,0.06);
+            font-size: 0.68rem;
+        }
+        .mini-card i { color: #4da8da; font-size: 0.8rem; margin-bottom: 0.2rem; display: block; }
+        .mini-card strong { display: block; margin-bottom: 0.1rem; }
+
+        /* Zones row */
+        .zone-row {
+            display: flex;
+            gap: 0.3rem;
+            margin-bottom: 0.6rem;
+        }
+        .zone-item {
+            flex: 1;
+            padding: 0.25rem;
+            border-radius: 4px;
             text-align: center;
-            font-size: 0.75rem;
+            font-size: 0.65rem;
             border: 1px solid rgba(255,255,255,0.1);
         }
         .zone-clear { border-color: #22c55e; background: rgba(34,197,94,0.05); }
@@ -192,85 +220,80 @@
         .zone-threat { border-color: #ef4444; background: rgba(239,68,68,0.05); }
         .zone-label { font-weight: 700; }
 
+        /* Command preview grid */
+        .preview-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.3rem;
+        }
         .preview-item {
             background: rgba(255,255,255,0.03);
-            padding: 0.4rem;
+            padding: 0.3rem;
             border-radius: 4px;
             text-align: center;
             border: 1px solid rgba(255,255,255,0.06);
         }
-        .preview-item .label { font-size: 0.7rem; color: #94a3b8; }
-        .preview-item .value { font-size: 0.9rem; font-weight: 600; }
-
-        .arch-list { list-style: none; font-size: 0.8rem; }
-        .arch-list li { padding: 0.15rem 0; display: flex; align-items: center; gap: 0.3rem; }
-        .arch-list li i { color: #4da8da; width: 16px; }
+        .preview-item .label { font-size: 0.6rem; color: #94a3b8; }
+        .preview-item .value { font-size: 0.7rem; font-weight: 600; }
 
         footer {
             text-align: center;
-            padding: 0.5rem;
+            padding: 0.4rem;
             background: rgba(8, 12, 24, 0.9);
             backdrop-filter: blur(8px);
             color: #94a3b8;
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             border-top: 1px solid rgba(255,255,255,0.06);
             flex-shrink: 0;
         }
         footer span { color: #4da8da; }
 
         @media (max-width: 768px) {
-            main { grid-template-columns: 1fr; overflow-y: auto; }
-            .status-bar { flex-wrap: wrap; justify-content: center; }
+            .card-row { flex-direction: column; }
+            .mini-grid { grid-template-columns: 1fr; }
+            .preview-grid { grid-template-columns: 1fr; }
+            .zone-row { flex-wrap: wrap; }
         }
     </style>
 </head>
 <body>
     <header>
-        <div class="logo"><i class="fas fa-shield-alt"></i> CephasGM<span>|EchoShield</span></div>
+        <a href="index.html" class="logo"><i class="fas fa-shield-alt"></i> CephasGM<span>|EchoShield</span></a>
         <nav>
-            <a href="dashboard.html">Dashboard</a>
-            <a href="signin.html" class="btn btn-outline">Sign In</a>
-            <a href="signup.html" class="btn btn-primary">Sign Up</a>
+            <a href="dashboard.html" class="btn">Dashboard</a>
         </nav>
     </header>
 
     <main>
-        <!-- Hero (merged with tagline) -->
+        <!-- Hero (tagline only) -->
         <div class="hero">
-            <h1>CephasGM <span>EchoShield</span></h1>
-            <p class="subhead">Hardware‑Assisted AI Drone Detection, Threat Assessment & Countermeasure Platform</p>
-            <div class="hero-buttons">
-                <a href="dashboard.html" class="btn btn-primary"><i class="fas fa-rocket"></i> Launch Dashboard</a>
-                <a href="signup.html" class="btn btn-outline"><i class="fas fa-user-plus"></i> Get Started</a>
+            <div class="tagline">Hardware‑Assisted <span>AI Drone Detection</span> & Countermeasure Platform</div>
+        </div>
+
+        <!-- Status & Calendar Card -->
+        <div class="status-card">
+            <div class="status-title">What you can see within the system dashboard in real‑time</div>
+            <div class="status-row" id="liveStatus">
+                <div class="status-item"><span>API</span><span class="status-dot dot-offline" id="apiStatus"></span><span id="apiText">CHECKING</span></div>
+                <div class="status-item"><span>DATABASE</span><span class="status-dot dot-online"></span><span>ONLINE</span></div>
+                <div class="status-item"><span>HARDWARE</span><span class="status-dot dot-online"></span><span>CONNECTED</span></div>
+                <div class="status-item"><span>LAST DETECTION</span><span id="lastDetection">---</span></div>
+            </div>
+            <div class="clock-row">
+                <span id="currentDateTime"></span>
+                <select id="timezoneSelect" onchange="updateClock()">
+                    <option value="Africa/Dar_es_Salaam">Dar es Salaam</option>
+                    <option value="Europe/Kyiv">Kyiv (Ukraine)</option>
+                    <option value="America/New_York">New York</option>
+                    <option value="Europe/London">London</option>
+                    <option value="Asia/Tokyo">Tokyo</option>
+                </select>
             </div>
         </div>
 
-        <!-- Live Status Widget (full width) -->
-        <div class="status-bar" id="liveStatus">
-            <div class="status-item">
-                <span>API</span>
-                <span class="status-dot dot-offline" id="apiStatus"></span>
-                <span id="apiText">CHECKING</span>
-            </div>
-            <div class="status-item">
-                <span>DATABASE</span>
-                <span class="status-dot dot-online"></span>
-                <span>ONLINE</span>
-            </div>
-            <div class="status-item">
-                <span>HARDWARE</span>
-                <span class="status-dot dot-online"></span>
-                <span>CONNECTED</span>
-            </div>
-            <div class="status-item">
-                <span>LAST DETECTION</span>
-                <span id="lastDetection">---</span>
-            </div>
-        </div>
-
-        <!-- Left Column: How It Works + Architecture -->
-        <div class="left-col">
-            <!-- How It Works (compact vertical flow) -->
+        <!-- Horizontal row of 4 cards -->
+        <div class="card-row">
+            <!-- 1. How It Works -->
             <div class="card">
                 <h2><span>How</span> It Works</h2>
                 <div class="flow-compact">
@@ -280,106 +303,93 @@
                     <div class="flow-arrow">↓</div>
                     <div class="flow-step"><i class="fas fa-plug"></i> Python Bridge</div>
                     <div class="flow-arrow">↓</div>
-                    <div class="flow-step"><i class="fas fa-brain"></i> EchoShield AI Engine</div>
+                    <div class="flow-step"><i class="fas fa-brain"></i> EchoShield AI</div>
                     <div class="flow-arrow">↓</div>
                     <div class="flow-step"><i class="fas fa-crosshairs"></i> Threat Classification</div>
                     <div class="flow-arrow">↓</div>
-                    <div class="flow-step"><i class="fas fa-shield-virus"></i> Countermeasure Decision</div>
+                    <div class="flow-step"><i class="fas fa-shield-virus"></i> Countermeasure</div>
                     <div class="flow-arrow">↓</div>
                     <div class="flow-step"><i class="fas fa-database"></i> Firestore Logging</div>
                     <div class="flow-arrow">↓</div>
-                    <div class="flow-step"><i class="fas fa-desktop"></i> Command Center Dashboard</div>
+                    <div class="flow-step"><i class="fas fa-desktop"></i> Command Center</div>
                 </div>
             </div>
 
-            <!-- System Architecture (compact) -->
+            <!-- 2. System Architecture -->
             <div class="card">
                 <h2><span>System</span> Architecture</h2>
-                <div class="grid-2">
-                    <div>
-                        <h3 style="color:#4da8da; font-size:0.85rem;">Current</h3>
-                        <ul class="arch-list">
-                            <li><i class="fas fa-check-circle"></i> Arduino UNO R3</li>
-                            <li><i class="fas fa-check-circle"></i> HC-SR04 Sensor</li>
-                            <li><i class="fas fa-check-circle"></i> LCD 1602 / Buzzer / LED</li>
-                            <li><i class="fas fa-check-circle"></i> Python Bridge</li>
-                            <li><i class="fas fa-check-circle"></i> EchoShield API (Render)</li>
-                            <li><i class="fas fa-check-circle"></i> Firebase Auth + Firestore</li>
-                            <li><i class="fas fa-check-circle"></i> Command Center Dashboard</li>
-                        </ul>
-                    </div>
-                    <div>
-                        <h3 style="color:#4da8da; font-size:0.85rem;">Future</h3>
-                        <ul class="arch-list">
-                            <li><i class="fas fa-hourglass-half"></i> ESP8266 / ESP32 Wi-Fi</li>
-                            <li><i class="fas fa-hourglass-half"></i> HC-05 Bluetooth</li>
-                            <li><i class="fas fa-hourglass-half"></i> ESP32-CAM</li>
-                            <li><i class="fas fa-hourglass-half"></i> Multi-Sensor Networks</li>
-                            <li><i class="fas fa-hourglass-half"></i> SDR Integration (RTL-SDR)</li>
-                            <li><i class="fas fa-hourglass-half"></i> Computer Vision (OpenCV)</li>
-                            <li><i class="fas fa-hourglass-half"></i> Real 3D Radar Plots</li>
-                        </ul>
-                    </div>
-                </div>
+                <h3 style="color:#4da8da; font-size:0.75rem;">Current</h3>
+                <ul class="arch-list">
+                    <li><i class="fas fa-check-circle"></i> Arduino UNO R3</li>
+                    <li><i class="fas fa-check-circle"></i> HC-SR04</li>
+                    <li><i class="fas fa-check-circle"></i> LCD 1602 / Buzzer / LED</li>
+                    <li><i class="fas fa-check-circle"></i> Python Bridge</li>
+                    <li><i class="fas fa-check-circle"></i> EchoShield API (Render)</li>
+                    <li><i class="fas fa-check-circle"></i> Firebase Auth + Firestore</li>
+                    <li><i class="fas fa-check-circle"></i> Command Center</li>
+                </ul>
+                <h3 style="color:#4da8da; font-size:0.75rem; margin-top:0.4rem;">Future</h3>
+                <ul class="arch-list">
+                    <li><i class="fas fa-hourglass-half"></i> ESP8266/ESP32 Wi‑Fi</li>
+                    <li><i class="fas fa-hourglass-half"></i> HC-05 Bluetooth</li>
+                    <li><i class="fas fa-hourglass-half"></i> ESP32-CAM</li>
+                    <li><i class="fas fa-hourglass-half"></i> Multi-Sensor Networks</li>
+                    <li><i class="fas fa-hourglass-half"></i> SDR (RTL‑SDR/HackRF)</li>
+                    <li><i class="fas fa-hourglass-half"></i> Computer Vision (OpenCV)</li>
+                </ul>
             </div>
-        </div>
 
-        <!-- Right Column: Capabilities + Zones + Command Preview -->
-        <div class="right-col">
-            <!-- Current Capabilities (compact) -->
+            <!-- 3. Current Capabilities -->
             <div class="card">
                 <h2><span>Current</span> Capabilities</h2>
-                <div class="grid-2">
+                <div class="mini-grid">
                     <div class="mini-card">
                         <i class="fas fa-microchip"></i>
                         <strong>Hardware Detection</strong>
-                        <p style="font-size:0.7rem; margin-top:0.2rem;">Arduino UNO R3 + HC-SR04. Buzzer alerts, LED countermeasure.</p>
+                        Arduino UNO + HC‑SR04. Buzzer, LED countermeasure.
                     </div>
                     <div class="mini-card">
                         <i class="fas fa-brain"></i>
                         <strong>AI Engine</strong>
-                        <p style="font-size:0.7rem; margin-top:0.2rem;">Signal classification, threat scoring, protocol recognition.</p>
+                        Signal classification, threat scoring, protocol recognition.
                     </div>
                     <div class="mini-card">
                         <i class="fas fa-shield-haltered"></i>
                         <strong>Command Center</strong>
-                        <p style="font-size:0.7rem; margin-top:0.2rem;">Live distance, threat levels, mission history, neutralization logs.</p>
+                        Live distance, threat levels, mission history, logs.
                     </div>
                     <div class="mini-card">
                         <i class="fas fa-cloud"></i>
                         <strong>Cloud Infrastructure</strong>
-                        <p style="font-size:0.7rem; margin-top:0.2rem;">Render API, Firebase Auth, Firestore DB, PWA offline.</p>
+                        Render API, Firebase Auth, Firestore DB, PWA.
                     </div>
                 </div>
             </div>
 
-            <!-- Detection Zones (compact) -->
+            <!-- 4. Detection Zones & Command Center Preview -->
             <div class="card">
                 <h2><span>Detection</span> Zones</h2>
-                <div class="grid-4">
+                <div class="zone-row">
                     <div class="zone-item zone-clear">
                         <div class="zone-label" style="color:#22c55e;">CLEAR</div>
                         <div>>150 cm</div>
                     </div>
                     <div class="zone-item zone-monitor">
                         <div class="zone-label" style="color:#3b82f6;">MONITOR</div>
-                        <div>100-150 cm</div>
+                        <div>100–150 cm</div>
                     </div>
                     <div class="zone-item zone-warning">
                         <div class="zone-label" style="color:#f59e0b;">WARNING</div>
-                        <div>50-100 cm</div>
+                        <div>50–100 cm</div>
                     </div>
                     <div class="zone-item zone-threat">
                         <div class="zone-label" style="color:#ef4444;">THREAT</div>
-                        <div><50 cm</div>
+                        <div>&lt;50 cm</div>
                     </div>
                 </div>
-            </div>
 
-            <!-- Command Center Preview (compact) -->
-            <div class="card">
-                <h2><span>Command Center</span> Preview</h2>
-                <div class="grid-3" style="margin-top:0.5rem;">
+                <h2 style="margin-top:0.6rem;"><span>Command Center</span> Preview</h2>
+                <div class="preview-grid">
                     <div class="preview-item">
                         <div class="label">STATUS</div>
                         <div class="value" style="color:#22c55e;">ONLINE</div>
@@ -393,12 +403,12 @@
                         <div class="value">82 cm</div>
                     </div>
                     <div class="preview-item">
-                        <div class="label">RADAR</div>
-                        <div class="value"><i class="fas fa-satellite-dish"></i> Active</div>
-                    </div>
-                    <div class="preview-item">
                         <div class="label">NEUTRALIZED</div>
                         <div class="value">21</div>
+                    </div>
+                    <div class="preview-item">
+                        <div class="label">RADAR</div>
+                        <div class="value"><i class="fas fa-satellite-dish"></i></div>
                     </div>
                     <div class="preview-item">
                         <div class="label">HISTORY</div>
@@ -428,7 +438,7 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
-        // ---------- Live Status Updater ----------
+        // ---------- Status Check ----------
         async function updateStatus() {
             const apiDot = document.getElementById('apiStatus');
             const apiText = document.getElementById('apiText');
@@ -445,13 +455,11 @@
                 apiText.textContent = 'OFFLINE';
             }
 
-            // Fetch last Arduino detection
             try {
                 const snap = await db.collection('simulations')
                     .where('source', '==', 'arduino')
                     .orderBy('timestamp', 'desc')
-                    .limit(1)
-                    .get();
+                    .limit(1).get();
                 if (!snap.empty) {
                     const data = snap.docs[0].data();
                     const timestamp = data.timestamp ? data.timestamp.toDate() : new Date();
@@ -467,6 +475,26 @@
         }
         updateStatus();
         setInterval(updateStatus, 30000);
+
+        // ---------- Clock & Timezone ----------
+        function updateClock() {
+            const tz = document.getElementById('timezoneSelect').value;
+            const now = new Date();
+            const options = {
+                timeZone: tz,
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                weekday: 'short',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+            };
+            document.getElementById('currentDateTime').textContent = now.toLocaleString('en-US', options);
+        }
+        updateClock();
+        setInterval(updateClock, 1000);
 
         // ---------- PWA ----------
         if ('serviceWorker' in navigator) {
