@@ -442,7 +442,7 @@ db.collection("simulations")
         // ---------- Real‑time Listener (NO composite index needed) ----------
         function listenForDetections() {
             db.collection('simulations')
-                .where('source', '==', 'arduino')
+                .limit(5)
                 .onSnapshot(
                     (snapshot) => {
                         console.log("Snapshot received, docs:", snapshot.size);
