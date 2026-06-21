@@ -53,21 +53,25 @@ def log_detection(document):
 
     try:
 
-        db.collection(
+        doc_ref = db.collection(
             "simulations"
         ).add(document)
+
+        print(
+            "FIRESTORE WRITE SUCCESS:",
+            doc_ref
+        )
 
         return True
 
     except Exception as e:
 
         print(
-            "Firestore Error:",
-            e
+            "FIRESTORE WRITE FAILED:",
+            str(e)
         )
 
         return False
-
 
 def verify_token(req):
 
