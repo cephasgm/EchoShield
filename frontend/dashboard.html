@@ -98,7 +98,6 @@
         .card h2 { font-size: 1.1rem; margin-bottom: 0.5rem; color: #fff; }
         .card h2 span { color: #4da8da; }
 
-        /* Map card */
         #mapCard { grid-column: 1; position: relative; }
         #leafletMap { flex: 1; border-radius: 6px; background: #111; }
         .map-toggle-btn {
@@ -116,7 +115,6 @@
         }
         .map-toggle-btn:hover { background: rgba(77,168,218,0.2); }
 
-        /* Right column */
         #rightCol {
             display: flex;
             flex-direction: column;
@@ -215,12 +213,12 @@
             <div id="leafletMap"></div>
         </div>
 
-        <!-- Right column: detection report + command center + history -->
+        <!-- Right column -->
         <div id="rightCol">
             <div class="card" id="resultsCard">
                 <h2><span>Detection</span> Report</h2>
                 <div id="detectionContent">
-                    <p id="detectionStatus" style="color:#94a3b8;">No threats currently detected. Scanning...</p>
+                    <p id="detectionStatus" style="color:#94a3b8;">Awaiting EchoShield hardware...</p>
                     <div id="reportDetails" style="display:none;">
                         <div id="badgeContainer"></div>
                         <div class="result-grid">
@@ -236,7 +234,6 @@
                 </div>
             </div>
 
-            <!-- Command Center -->
             <div class="card" id="commandCenter">
                 <h2><span>Command</span> Center</h2>
                 <div class="result-grid">
@@ -267,7 +264,6 @@
                 </div>
             </div>
 
-            <!-- Mission History -->
             <div class="card" id="historyCard">
                 <h2><span>Mission</span> History</h2>
                 <div id="historyContainer"><p style="color:#94a3b8;">Loading...</p></div>
@@ -284,11 +280,9 @@
     <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore-compat.js"></script>
-    <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <script>
-        // ---------- Firebase Init ----------
         const firebaseConfig = {
             apiKey: "AIzaSyCM_7S0zPDz4G2xzlevL3pwj7U0pYih-Zk",
             authDomain: "echoshield-38f36.firebaseapp.com",
@@ -303,10 +297,8 @@
         const db = firebase.firestore();
         const API_BASE = 'https://echoshield-api-4x6z.onrender.com';
 
-        // ---------- Deduplication ----------
         let lastDetectionTimestamp = 0;
 
-        // ---------- Auth ----------
         auth.onAuthStateChanged(async (user) => {
             if (!user) { window.location.href = 'signin.html'; return; }
             document.getElementById('userEmail').textContent = user.email;
@@ -321,10 +313,7 @@
         });
 
         // ---------- Map & Radar ----------
-        let map;
-        let userMarker;
-        let rangeCircle;
-        let sweepLine;
+        let map, userMarker, rangeCircle, sweepLine;
         let threatMarkers = [];
         let sweepAngle = 0;
         let animationId;
@@ -347,11 +336,9 @@
                         zoomControl: true,
                         attributionControl: false
                     });
-
                     darkLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
                         maxZoom: 19
                     }).addTo(map);
-
                     satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
                         maxZoom: 19
                     });
@@ -359,24 +346,15 @@
                     const userIcon = L.divIcon({
                         className: 'custom-icon',
                         html: '<i class="fas fa-shield-alt" style="color:#4da8da; font-size:24px; filter: drop-shadow(0 0 8px #4da8da);"></i>',
-                        iconSize: [30, 30],
-                        iconAnchor: [15, 15]
+                        iconSize: [30,30], iconAnchor: [15,15]
                     });
                     userMarker = L.marker([lat, lon], { icon: userIcon }).addTo(map).bindPopup('You are here').openPopup();
-
                     rangeCircle = L.circle([lat, lon], {
                         radius: 500,
-                        color: '#4da8da',
-                        weight: 1,
-                        fillOpacity: 0.05,
-                        fillColor: '#4da8da',
-                        dashArray: '4,4'
+                        color: '#4da8da', weight: 1, fillOpacity: 0.05, fillColor: '#4da8da', dashArray: '4,4'
                     }).addTo(map);
-
                     sweepLine = L.polyline([], { color: '#4da8da', weight: 2, opacity: 0.7 }).addTo(map);
-
                     startSweep();
-                    startAutoScan();
                 },
                 (err) => {
                     map = L.map('leafletMap', {
@@ -392,16 +370,17 @@
                         maxZoom: 19
                     });
                     userMarker = L.marker([-6.8, 39.2]).addTo(map).bindPopup('Default location').openPopup();
-                    rangeCircle = L.circle([-6.8, 39.2], { radius: 500, color: '#4da8da', weight: 1, fillOpacity: 0.05, dashArray: '4,4' }).addTo(map);
+                    rangeCircle = L.circle([-6.8, 39.2], {
+                        radius: 500, color: '#4da8da', weight: 1, fillOpacity: 0.05, dashArray: '4,4'
+                    }).addTo(map);
                     sweepLine = L.polyline([], { color: '#4da8da', weight: 2, opacity: 0.7 }).addTo(map);
                     startSweep();
-                    startAutoScan();
                 },
                 { enableHighAccuracy: true, timeout: 5000 }
             );
         }
 
-        document.getElementById('toggleSatellite').addEventListener('click', function() {
+        document.getElementById('toggleSatellite').addEventListener('click', () => {
             if (!map) return;
             isSatellite = !isSatellite;
             if (isSatellite) {
@@ -444,7 +423,6 @@
             return L.latLng(lat2 * 180 / Math.PI, lon2 * 180 / Math.PI);
         }
 
-        // ---------- Audio Alert ----------
         function playAlertSound() {
             try {
                 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -464,146 +442,7 @@
             } catch (e) {}
         }
 
-        // ---------- Auto Detection (simulated) ----------
-        let detectionActive = false;
-        let autoScanInterval;
-
-        function startAutoScan() {
-            if (autoScanInterval) clearTimeout(autoScanInterval);
-            scheduleNextScan();
-        }
-
-        function scheduleNextScan() {
-            const delay = 6000 + Math.floor(Math.random() * 8000);
-            autoScanInterval = setTimeout(() => {
-                runDetection();
-                scheduleNextScan();
-            }, delay);
-        }
-
-        async function runDetection() {
-            if (detectionActive || !map) return;
-            detectionActive = true;
-
-            const center = userMarker ? userMarker.getLatLng() : map.getCenter();
-            const lat = center.lat;
-            const lng = center.lng;
-
-            const protocols = ['wifi', 'lora', 'dji'];
-            const protocol = protocols[Math.floor(Math.random() * protocols.length)];
-
-            const offsetLat = (Math.random() - 0.5) * 0.015;
-            const offsetLng = (Math.random() - 0.5) * 0.015;
-            const threatLat = lat + offsetLat;
-            const threatLng = lng + offsetLng;
-
-            try {
-                const user = auth.currentUser;
-                if (!user) throw new Error('Not authenticated');
-                const idToken = await user.getIdToken();
-                const response = await fetch(`${API_BASE}/api/simulate`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${idToken}`
-                    },
-                    body: JSON.stringify({ protocol })
-                });
-                if (!response.ok) throw new Error('Analysis failed');
-                const data = await response.json();
-
-                const isThreat = data.confidence > 0.6;
-
-                const iconHtml = isThreat 
-                    ? '<i class="fas fa-fighter-jet" style="color:#f87171; font-size:20px;"></i>'
-                    : '<i class="fas fa-plane" style="color:#fbbf24; font-size:20px;"></i>';
-                const lineColor = isThreat ? '#f87171' : '#fbbf24';
-
-                const threatIcon = L.divIcon({
-                    className: 'threat-icon',
-                    html: iconHtml,
-                    iconSize: [24, 24],
-                    iconAnchor: [12, 12]
-                });
-                const threatMarker = L.marker([threatLat, threatLng], { icon: threatIcon }).addTo(map);
-                const attackLine = L.polyline([center, [threatLat, threatLng]], {
-                    color: lineColor,
-                    weight: 1,
-                    dashArray: isThreat ? '4,4' : '10,5',
-                    opacity: 0.8
-                }).addTo(map);
-                threatMarkers.push(threatMarker, attackLine);
-
-                const statusEl = document.getElementById('detectionStatus');
-                const detailsDiv = document.getElementById('reportDetails');
-                const badgeContainer = document.getElementById('badgeContainer');
-
-                statusEl.style.display = 'none';
-                detailsDiv.style.display = 'block';
-
-                if (isThreat) {
-                    badgeContainer.innerHTML = '<span class="alert-badge"><i class="fas fa-exclamation-triangle"></i> Threat Detected</span>';
-                    document.getElementById('contactType').textContent = mapDroneName(data.detected_protocol);
-                    document.getElementById('confidence').textContent = (data.confidence * 100).toFixed(1) + '%';
-                    document.getElementById('jamType').textContent = mapJamName(data.jamming.modulation);
-                    // Only auto‑scan threats still play sound (simulated threats)
-                    playAlertSound();
-
-                    db.collection('simulations').add({
-                        userId: user.uid,
-                        userEmail: user.email,
-                        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                        protocolRequested: protocol,
-                        detectedProtocol: data.detected_protocol,
-                        confidence: data.confidence,
-                        jammingParams: data.jamming,
-                        source: 'autoscan'
-                    });
-                    loadHistory();
-                    updateStatistics();
-
-                    setTimeout(() => {
-                        threatMarker.setIcon(L.divIcon({
-                            className: 'threat-icon',
-                            html: '<i class="fas fa-check-circle" style="color:#22c55e; font-size:20px;"></i>',
-                            iconSize: [24,24],
-                            iconAnchor: [12,12]
-                        }));
-                        attackLine.setStyle({ color: '#22c55e' });
-                    }, 2000);
-                } else {
-                    badgeContainer.innerHTML = '<span class="friendly-badge"><i class="fas fa-check-circle"></i> Friendly / Unknown</span>';
-                    document.getElementById('contactType').textContent = 'Passenger Aircraft / Unknown';
-                    document.getElementById('confidence').textContent = (data.confidence * 100).toFixed(1) + '% (non‑drone)';
-                    document.getElementById('jamType').textContent = 'Monitoring (no threat)';
-                }
-
-                document.getElementById('jamFreq').textContent = (data.jamming.center_freq_hz / 1e6).toFixed(2) + ' MHz';
-                document.getElementById('jamBW').textContent = (data.jamming.bandwidth_hz / 1e3).toFixed(1) + ' kHz';
-                document.getElementById('jamPower').textContent = data.jamming.power_dbm + ' dBm';
-                const img = document.getElementById('spectrogramImg');
-                if (data.spectrogram_url) {
-                    img.src = API_BASE + data.spectrogram_url;
-                    img.style.display = 'block';
-                } else {
-                    img.style.display = 'none';
-                }
-
-                setTimeout(() => {
-                    threatMarkers.forEach(m => map.removeLayer(m));
-                    threatMarkers = [];
-                    document.getElementById('detectionStatus').style.display = 'block';
-                    document.getElementById('reportDetails').style.display = 'none';
-                }, isThreat ? 10000 : 7000);
-
-            } catch (err) {
-                console.error('Detection error:', err);
-            } finally {
-                detectionActive = false;
-            }
-        }
-
-        // ---------- Real‑time Listener for Arduino detections (FIXED) ----------
+        // ---------- Real‑time Listener ----------
         function listenForDetections() {
             db.collection('simulations')
                 .where('source', '==', 'arduino')
@@ -613,42 +452,34 @@
                     snapshot.docChanges().forEach((change) => {
                         if (change.type === 'added') {
                             const data = change.doc.data();
-
-                            // Timestamp‑based deduplication – ignore already‑processed detections
                             const ts = data.timestamp ? data.timestamp.toMillis() : 0;
-                            if (ts <= lastDetectionTimestamp) {
-                                return;   // already handled this detection
-                            }
+                            if (ts <= lastDetectionTimestamp) return;
                             lastDetectionTimestamp = ts;
 
-                            // Update Command Center
                             document.getElementById('liveDistance').textContent =
                                 (data.distance_cm || '---') + ' cm';
-
                             document.getElementById('lastTarget').textContent =
                                 mapDroneName(data.detectedProtocol || 'wifi');
 
                             const threatElement = document.getElementById('threatLevel');
                             threatElement.textContent = data.zone || 'CLEAR';
+                            const colorMap = {
+                                CLEAR: '#22c55e',
+                                MONITOR: '#3b82f6',
+                                WARNING: '#f59e0b',
+                                THREAT: '#ef4444'
+                            };
+                            threatElement.style.color = colorMap[data.zone] || '#fff';
 
-                            switch(data.zone) {
-                                case 'CLEAR':
-                                    threatElement.style.color = '#22c55e';
-                                    break;
-                                case 'MONITOR':
-                                    threatElement.style.color = '#3b82f6';
-                                    break;
-                                case 'WARNING':
-                                    threatElement.style.color = '#f59e0b';
-                                    break;
-                                case 'THREAT':
-                                    threatElement.style.color = '#ef4444';
-                                    break;
-                                default:
-                                    threatElement.style.color = '#fff';
-                            }
+                            // Debug logging
+                            console.log(
+                                "Arduino Detection:",
+                                data.distance_cm,
+                                data.zone,
+                                data.threat
+                            );
 
-                            // ALERT ONLY for confirmed THREAT zone + threat flag
+                            // Alert only on confirmed threat
                             if (data.zone === 'THREAT' && data.threat === true) {
                                 playAlertSound();
                             }
@@ -660,26 +491,21 @@
                 });
         }
 
-        // ---------- Statistics ----------
         async function updateStatistics() {
             try {
                 const snapshot = await db.collection('simulations')
                     .where('source', '==', 'arduino')
                     .get();
-
-                let detections = 0;
-                let neutralized = 0;
-
+                let detections = 0, neutralized = 0;
                 snapshot.forEach(doc => {
                     const d = doc.data();
                     detections++;
                     if (d.threat) neutralized++;
                 });
-
                 document.getElementById('detectionsToday').textContent = detections;
                 document.getElementById('threatsNeutralized').textContent = neutralized;
-            } catch (err) {
-                console.error('Statistics error:', err);
+            } catch (e) {
+                console.error('Statistics error:', e);
             }
         }
 
@@ -692,20 +518,18 @@
             return names[m] || m.replace('_', ' ');
         }
 
-        // ---------- History ----------
         async function loadHistory() {
             const container = document.getElementById('historyContainer');
             try {
                 const snapshot = await db.collection('simulations')
+                    .where('source', '==', 'arduino')
                     .orderBy('timestamp', 'desc')
                     .limit(5)
                     .get();
-
                 if (snapshot.empty) {
-                    container.innerHTML = '<p style="color:#94a3b8;">No missions logged yet.</p>';
+                    container.innerHTML = '<p style="color:#94a3b8;">No hardware missions logged yet.</p>';
                     return;
                 }
-
                 let html = `<table class="history-table">
                     <thead><tr><th>Time</th><th>Target</th><th>Action</th><th>Conf</th></tr></thead><tbody>`;
                 snapshot.forEach(doc => {
@@ -715,7 +539,7 @@
                         <td>${time}</td>
                         <td>${mapDroneName(d.detectedProtocol || 'wifi')}</td>
                         <td>${mapJamName((d.jammingParams && d.jammingParams.modulation) || 'wideband_noise')}</td>
-                        <td>${((d.confidence || 0) * 100).toFixed(0)}%</td>
+                        <td>${((d.confidence || 0)*100).toFixed(0)}%</td>
                     </tr>`;
                 });
                 html += '</tbody></table>';
@@ -725,7 +549,6 @@
             }
         }
 
-        // ---------- PWA ----------
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('/sw.js')
