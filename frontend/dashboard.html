@@ -102,8 +102,7 @@
         #leafletMap { flex: 1; border-radius: 6px; background: #111; }
         .map-toggle-btn {
             position: absolute;
-            top: 5px;
-            right: 5px;
+            top: 5px; right: 5px;
             z-index: 1000;
             background: rgba(0,0,0,0.7);
             color: #fff;
@@ -122,10 +121,6 @@
             grid-column: 2;
             overflow-y: auto;
         }
-        #resultsCard { flex: 1; }
-        #commandCenter { flex: 1; }
-        #historyCard { flex: 1; max-height: 40vh; overflow-y: auto; }
-
         .result-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -298,6 +293,7 @@
         const API_BASE = 'https://echoshield-api-4x6z.onrender.com';
 
         let lastDetectionTimestamp = 0;
+        let lastHardwarePing = Date.now();
 
         auth.onAuthStateChanged(async (user) => {
             if (!user) { window.location.href = 'signin.html'; return; }
@@ -325,16 +321,12 @@
                 alert('Geolocation not supported');
                 return;
             }
-
             navigator.geolocation.getCurrentPosition(
                 (pos) => {
                     const lat = pos.coords.latitude;
                     const lon = pos.coords.longitude;
                     map = L.map('leafletMap', {
-                        center: [lat, lon],
-                        zoom: 15,
-                        zoomControl: true,
-                        attributionControl: false
+                        center: [lat, lon], zoom: 15, zoomControl: true, attributionControl: false
                     });
                     darkLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
                         maxZoom: 19
@@ -342,7 +334,6 @@
                     satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
                         maxZoom: 19
                     });
-
                     const userIcon = L.divIcon({
                         className: 'custom-icon',
                         html: '<i class="fas fa-shield-alt" style="color:#4da8da; font-size:24px; filter: drop-shadow(0 0 8px #4da8da);"></i>',
@@ -350,18 +341,14 @@
                     });
                     userMarker = L.marker([lat, lon], { icon: userIcon }).addTo(map).bindPopup('You are here').openPopup();
                     rangeCircle = L.circle([lat, lon], {
-                        radius: 500,
-                        color: '#4da8da', weight: 1, fillOpacity: 0.05, fillColor: '#4da8da', dashArray: '4,4'
+                        radius: 500, color: '#4da8da', weight: 1, fillOpacity: 0.05, fillColor: '#4da8da', dashArray: '4,4'
                     }).addTo(map);
                     sweepLine = L.polyline([], { color: '#4da8da', weight: 2, opacity: 0.7 }).addTo(map);
                     startSweep();
                 },
                 (err) => {
                     map = L.map('leafletMap', {
-                        center: [-6.8, 39.2],
-                        zoom: 13,
-                        zoomControl: true,
-                        attributionControl: false
+                        center: [-6.8, 39.2], zoom: 13, zoomControl: true, attributionControl: false
                     });
                     darkLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
                         maxZoom: 19
@@ -380,7 +367,7 @@
             );
         }
 
-        document.getElementById('toggleSatellite').addEventListener('click', () => {
+        document.getElementById('toggleSatellite').addEventListener('click', function() {
             if (!map) return;
             isSatellite = !isSatellite;
             if (isSatellite) {
@@ -442,55 +429,89 @@
             } catch (e) {}
         }
 
-        // ---------- Real‑time Listener ----------
+        // ---------- Real‑time Listener (fixed) ----------
         function listenForDetections() {
             db.collection('simulations')
                 .where('source', '==', 'arduino')
                 .orderBy('timestamp', 'desc')
                 .limit(1)
                 .onSnapshot((snapshot) => {
-                    snapshot.docChanges().forEach((change) => {
-                        if (change.type === 'added') {
-                            const data = change.doc.data();
-                            const ts = data.timestamp ? data.timestamp.toMillis() : 0;
-                            if (ts <= lastDetectionTimestamp) return;
-                            lastDetectionTimestamp = ts;
+                    // Use forEach instead of docChanges to avoid missing modified events
+                    snapshot.forEach((doc) => {
+                        const data = doc.data();
+                        console.log("LIVE FIRESTORE EVENT", data);
 
-                            document.getElementById('liveDistance').textContent =
-                                (data.distance_cm || '---') + ' cm';
-                            document.getElementById('lastTarget').textContent =
-                                mapDroneName(data.detectedProtocol || 'wifi');
+                        const ts = data.timestamp ? data.timestamp.toMillis() : 0;
+                        if (ts <= lastDetectionTimestamp) return;
+                        lastDetectionTimestamp = ts;
 
-                            const threatElement = document.getElementById('threatLevel');
-                            threatElement.textContent = data.zone || 'CLEAR';
-                            const colorMap = {
-                                CLEAR: '#22c55e',
-                                MONITOR: '#3b82f6',
-                                WARNING: '#f59e0b',
-                                THREAT: '#ef4444'
-                            };
-                            threatElement.style.color = colorMap[data.zone] || '#fff';
+                        // Update hardware ping time for system status
+                        lastHardwarePing = Date.now();
+                        document.getElementById('systemStatus').textContent = 'HARDWARE ONLINE';
 
-                            // Debug logging
-                            console.log(
-                                "Arduino Detection:",
-                                data.distance_cm,
-                                data.zone,
-                                data.threat
-                            );
+                        // Command Center updates
+                        document.getElementById('liveDistance').textContent =
+                            (data.distance_cm || '---') + ' cm';
+                        document.getElementById('lastTarget').textContent =
+                            mapDroneName(data.detectedProtocol || 'wifi');
 
-                            // Alert only on confirmed threat
-                            if (data.zone === 'THREAT' && data.threat === true) {
-                                playAlertSound();
-                            }
+                        const threatElement = document.getElementById('threatLevel');
+                        threatElement.textContent = data.zone || 'CLEAR';
+                        const colorMap = {
+                            CLEAR: '#22c55e',
+                            MONITOR: '#3b82f6',
+                            WARNING: '#f59e0b',
+                            THREAT: '#ef4444'
+                        };
+                        threatElement.style.color = colorMap[data.zone] || '#fff';
 
-                            loadHistory();
-                            updateStatistics();
+                        // Detection Report updates
+                        document.getElementById('detectionStatus').style.display = 'none';
+                        document.getElementById('reportDetails').style.display = 'block';
+                        document.getElementById('contactType').textContent =
+                            mapDroneName(data.detectedProtocol || 'wifi');
+                        document.getElementById('confidence').textContent =
+                            ((data.confidence || 0) * 100).toFixed(1) + '%';
+                        document.getElementById('jamType').textContent =
+                            data.jammingParams ? mapJamName(data.jammingParams.modulation) : 'None';
+                        document.getElementById('jamFreq').textContent =
+                            data.jammingParams ? (data.jammingParams.center_freq_hz / 1e6).toFixed(2) + ' MHz' : '---';
+                        document.getElementById('jamBW').textContent =
+                            data.jammingParams ? (data.jammingParams.bandwidth_hz / 1e3).toFixed(1) + ' kHz' : '---';
+                        document.getElementById('jamPower').textContent =
+                            data.jammingParams ? data.jammingParams.power_dbm + ' dBm' : '---';
+
+                        // Map: draw threat marker
+                        if (map && userMarker) {
+                            const pos = userMarker.getLatLng();
+                            const threatIcon = L.divIcon({
+                                className: 'threat-icon',
+                                html: (data.zone === 'THREAT') 
+                                    ? '<i class="fas fa-fighter-jet" style="color:#f87171; font-size:20px;"></i>'
+                                    : '<i class="fas fa-exclamation-circle" style="color:#f59e0b; font-size:20px;"></i>',
+                                iconSize: [24,24], iconAnchor: [12,12]
+                            });
+                            const marker = L.marker(pos, { icon: threatIcon }).addTo(map);
+                            threatMarkers.push(marker);
+                            // Remove after 10 seconds
+                            setTimeout(() => {
+                                map.removeLayer(marker);
+                                threatMarkers = threatMarkers.filter(m => m !== marker);
+                            }, 10000);
                         }
+
+                        // Alert only on confirmed THREAT
+                        if (data.zone === 'THREAT' && data.threat === true) {
+                            playAlertSound();
+                        }
+
+                        loadHistory();
+                        updateStatistics();
                     });
                 });
         }
 
+        // ---------- Statistics ----------
         async function updateStatistics() {
             try {
                 const snapshot = await db.collection('simulations')
@@ -509,6 +530,14 @@
             }
         }
 
+        // ---------- System Status Watchdog ----------
+        setInterval(() => {
+            const age = Date.now() - lastHardwarePing;
+            if (age > 30000) {
+                document.getElementById('systemStatus').textContent = 'HARDWARE OFFLINE';
+            }
+        }, 5000);
+
         function mapDroneName(p) {
             const names = { wifi: 'Consumer Drone', lora: 'Long‑Range FPV', dji: 'Tactical UAV' };
             return names[p] || p.toUpperCase();
@@ -518,6 +547,7 @@
             return names[m] || m.replace('_', ' ');
         }
 
+        // ---------- History (filtered to arduino) ----------
         async function loadHistory() {
             const container = document.getElementById('historyContainer');
             try {
@@ -545,10 +575,11 @@
                 html += '</tbody></table>';
                 container.innerHTML = html;
             } catch (e) {
-                container.innerHTML = `<p style="color:#f87171;">Error loading history.</p>`;
+                container.innerHTML = `<p style="color:#f87171;">Error loading history: ${e.message}</p>`;
             }
         }
 
+        // PWA
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('/sw.js')
