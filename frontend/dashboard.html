@@ -288,9 +288,19 @@
             measurementId: "G-KDCDBN5KGS"
         };
         firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
-        const db = firebase.firestore();
-        const API_BASE = 'https://echoshield-api-4x6z.onrender.com';
+const auth = firebase.auth();
+const db = firebase.firestore();
+const API_BASE = 'https://echoshield-api-4x6z.onrender.com';
+
+// TEST FIRESTORE READ
+db.collection("simulations")
+.get()
+.then((snap) => {
+    alert("Documents found: " + snap.size);
+})
+.catch((err) => {
+    alert("Firestore Error: " + err.message);
+});
 
         let lastDetectionTimestamp = 0;   // milliseconds
         let lastHardwarePing = Date.now();
