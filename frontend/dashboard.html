@@ -429,19 +429,31 @@
             } catch (e) {}
         }
 
-        // ---------- Real‑time Listener (fixed) ----------
+        // ---------- Real‑time Listener (NO composite index required) ----------
         function listenForDetections() {
+            // Only filter by source, NO orderBy/limit – client-side sorting handles the rest
             db.collection('simulations')
                 .where('source', '==', 'arduino')
-                .orderBy('timestamp', 'desc')
-                .limit(1)
-                .onSnapshot((snapshot) => {
-                    // Use forEach instead of docChanges to avoid missing modified events
-                    snapshot.forEach((doc) => {
-                        const data = doc.data();
+                .onSnapshot(
+                    (snapshot) => {
+                        console.log("Snapshot received, docs:", snapshot.size);
+                        // Find the latest document by timestamp
+                        let latestDoc = null;
+                        let latestTime = 0;
+                        snapshot.forEach((doc) => {
+                            const data = doc.data();
+                            const ts = data.timestamp ? data.timestamp.toMillis() : 0;
+                            if (ts > latestTime) {
+                                latestTime = ts;
+                                latestDoc = doc;
+                            }
+                        });
+                        if (!latestDoc) return;
+
+                        const data = latestDoc.data();
                         console.log("LIVE FIRESTORE EVENT", data);
 
-                        const ts = data.timestamp ? data.timestamp.toMillis() : 0;
+                        const ts = latestTime;
                         if (ts <= lastDetectionTimestamp) return;
                         lastDetectionTimestamp = ts;
 
@@ -493,7 +505,6 @@
                             });
                             const marker = L.marker(pos, { icon: threatIcon }).addTo(map);
                             threatMarkers.push(marker);
-                            // Remove after 10 seconds
                             setTimeout(() => {
                                 map.removeLayer(marker);
                                 threatMarkers = threatMarkers.filter(m => m !== marker);
@@ -507,8 +518,11 @@
 
                         loadHistory();
                         updateStatistics();
-                    });
-                });
+                    },
+                    (error) => {
+                        console.error("Listener Error:", error);
+                    }
+                );
         }
 
         // ---------- Statistics ----------
@@ -547,22 +561,32 @@
             return names[m] || m.replace('_', ' ');
         }
 
-        // ---------- History (filtered to arduino) ----------
+        // ---------- History (client‑side sort, NO composite index needed) ----------
         async function loadHistory() {
             const container = document.getElementById('historyContainer');
             try {
                 const snapshot = await db.collection('simulations')
                     .where('source', '==', 'arduino')
-                    .orderBy('timestamp', 'desc')
-                    .limit(5)
                     .get();
-                if (snapshot.empty) {
+
+                // Convert to array and sort by timestamp descending
+                const docs = [];
+                snapshot.forEach(doc => docs.push(doc));
+                docs.sort((a, b) => {
+                    const ta = a.data().timestamp ? a.data().timestamp.toMillis() : 0;
+                    const tb = b.data().timestamp ? b.data().timestamp.toMillis() : 0;
+                    return tb - ta;
+                });
+
+                if (docs.length === 0) {
                     container.innerHTML = '<p style="color:#94a3b8;">No hardware missions logged yet.</p>';
                     return;
                 }
+
+                // Show top 5
                 let html = `<table class="history-table">
                     <thead><tr><th>Time</th><th>Target</th><th>Action</th><th>Conf</th></tr></thead><tbody>`;
-                snapshot.forEach(doc => {
+                docs.slice(0, 5).forEach(doc => {
                     const d = doc.data();
                     const time = d.timestamp ? d.timestamp.toDate().toLocaleTimeString() : 'Now';
                     html += `<tr>
