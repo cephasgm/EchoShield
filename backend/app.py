@@ -88,17 +88,8 @@ def simulate():
         pred, conf = classify_spectrogram(spec)
         jam = generate_jamming_signal(pred)
 
-        try:
-            db.collection("simulations").add({
-                "userId": uid,
-                "timestamp": firestore.SERVER_TIMESTAMP,
-                "protocolRequested": protocol,
-                "detectedProtocol": pred,
-                "confidence": float(conf),
-                "jammingParams": jam
-            })
-        except Exception as e:
-            print(f"Firestore logging error: {e}")
+        # Firestore logging temporarily disabled
+print("Arduino detection logged locally")
 
         return jsonify({
             "detected_protocol": pred,
