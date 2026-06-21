@@ -81,15 +81,9 @@ def simulate():
 
         protocol = data["protocol"].lower()
 
-        if protocol not in ("wifi", "lora", "dji"):
-            return jsonify({"error": "Invalid protocol"}), 400
-
         iq, spec = generate_iq_and_spectrogram(protocol)
         pred, conf = classify_spectrogram(spec)
         jam = generate_jamming_signal(pred)
-
-        # Firestore logging temporarily disabled
-print("Arduino detection logged locally")
 
         return jsonify({
             "detected_protocol": pred,
@@ -110,24 +104,11 @@ def arduino_detect():
 
         protocol = data.get("protocol", "wifi").lower()
 
-        if protocol not in ("wifi", "lora", "dji"):
-            protocol = "wifi"
-
         iq, spec = generate_iq_and_spectrogram(protocol)
         pred, conf = classify_spectrogram(spec)
         jam = generate_jamming_signal(pred)
 
-        try:
-            db.collection("simulations").add({
-                "userId": "arduino_demo",
-                "timestamp": firestore.SERVER_TIMESTAMP,
-                "protocolRequested": protocol,
-                "detectedProtocol": pred,
-                "confidence": float(conf),
-                "jammingParams": jam
-            })
-        except Exception as e:
-            print(f"Firestore logging error: {e}")
+        print("Arduino detection logged locally")
 
         return jsonify({
             "detected_protocol": pred,
@@ -146,7 +127,7 @@ def spectrogram(filename):
     try:
         protocol = "wifi"
 
-        iq, spec = generate_iq_and_spectrogram(protocol)
+        _, spec = generate_iq_and_spectrogram(protocol)
 
         img = io.BytesIO()
 
@@ -168,9 +149,9 @@ def spectrogram(filename):
 
         return send_file(img, mimetype="image/png")
 
-    except Exception:
+    except Exception as e:
         traceback.print_exc()
-        return jsonify({"error": "Failed to generate spectrogram"}), 500
+        return jsonify({"error": str(e)}), 500
 
 
 @app.after_request
