@@ -446,6 +446,10 @@ db.collection("simulations")
                 .onSnapshot(
                     (snapshot) => {
                         console.log("Snapshot received, docs:", snapshot.size);
+snapshot.forEach((doc) => {
+                alert(JSON.stringify(doc.data(), null, 2));
+            });
+
 
                         // Find the latest document with a valid timestamp
                         let latestDoc = null;
