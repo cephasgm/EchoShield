@@ -26,25 +26,31 @@ CORS(
     }
 )
 
+# ---------- Firebase Init ----------
 secret_path = "/etc/secrets/firebase-service-account.json"
-
 if not firebase_admin._apps:
     if os.path.exists(secret_path):
         cred = credentials.Certificate(secret_path)
     else:
         cred = credentials.Certificate("firebase-service-account.json")
-
     firebase_admin.initialize_app(cred)
 
 db = firestore.client()
 
+# Optional helper for clean future logging
+def log_detection(document):
+    try:
+        db.collection("simulations").add(document)
+        return True
+    except Exception as e:
+        print("Firestore Error:", e)
+        return False
+
 
 def verify_token(req):
     auth_header = req.headers.get("Authorization")
-
     if not auth_header or not auth_header.startswith("Bearer "):
         return None, "Missing or invalid Authorization header"
-
     try:
         token = auth_header.split("Bearer ")[1]
         decoded_token = auth.verify_id_token(token)
@@ -70,12 +76,10 @@ def health():
 def simulate():
     try:
         uid, err = verify_token(request)
-
         if err:
             return jsonify({"error": err}), 401
 
         data = request.get_json(silent=True)
-
         if not data or "protocol" not in data:
             return jsonify({"error": "Missing protocol"}), 400
 
@@ -101,20 +105,37 @@ def simulate():
 def arduino_detect():
     try:
         data = request.get_json(silent=True) or {}
-
         protocol = data.get("protocol", "wifi").lower()
 
+        # Generate signal and AI analysis
         iq, spec = generate_iq_and_spectrogram(protocol)
         pred, conf = classify_spectrogram(spec)
         jam = generate_jamming_signal(pred)
 
-        print("Arduino detection logged locally")
+        threat = float(conf) > 0.60
+
+        # Save hardware detection to Firestore (source = arduino)
+        try:
+            db.collection("simulations").add({
+                "userId": "arduino_hardware",
+                "userEmail": "hardware@echoshield.local",
+                "timestamp": firestore.SERVER_TIMESTAMP,
+                "protocolRequested": protocol,
+                "detectedProtocol": pred,
+                "confidence": float(conf),
+                "jammingParams": jam,
+                "source": "arduino",
+                "threat": threat
+            })
+            print("Arduino detection saved to Firestore")
+        except Exception as firestore_error:
+            print("Firestore Error:", firestore_error)
 
         return jsonify({
             "detected_protocol": pred,
             "confidence": float(conf),
             "jamming": jam,
-            "threat": float(conf) > 0.60
+            "threat": threat
         })
 
     except Exception as e:
@@ -126,25 +147,15 @@ def arduino_detect():
 def spectrogram(filename):
     try:
         protocol = "wifi"
-
         _, spec = generate_iq_and_spectrogram(protocol)
 
         img = io.BytesIO()
-
         plt.figure(figsize=(6, 4))
         plt.imshow(spec, aspect="auto", origin="lower", cmap="inferno")
         plt.axis("off")
         plt.tight_layout(pad=0)
-
-        plt.savefig(
-            img,
-            format="png",
-            bbox_inches="tight",
-            pad_inches=0
-        )
-
+        plt.savefig(img, format="png", bbox_inches="tight", pad_inches=0)
         plt.close()
-
         img.seek(0)
 
         return send_file(img, mimetype="image/png")

@@ -219,7 +219,7 @@
             <div class="card" id="resultsCard">
                 <h2><span>Detection</span> Report</h2>
                 <div id="detectionContent">
-                    <p id="detectionStatus" style="color:#94a3b8;">No threats currently detected. Scanning...</p>
+                    <p id="detectionStatus" style="color:#94a3b8;">Awaiting hardware sensor...</p>
                     <div id="reportDetails" style="display:none;">
                         <div id="badgeContainer"></div>
                         <div class="result-grid">
@@ -269,11 +269,15 @@
         const db = firebase.firestore();
         const API_BASE = 'https://echoshield-api-4x6z.onrender.com';
 
+        // Global tracking for Arduino detections
+        let lastDetectionId = null;
+
         // ---------- Auth ----------
         auth.onAuthStateChanged(async (user) => {
             if (!user) { window.location.href = 'signin.html'; return; }
             document.getElementById('userEmail').textContent = user.email;
-            loadHistory(user.uid);
+            loadHistory();
+            listenForDetections();
             initMap();
         });
 
@@ -341,7 +345,7 @@
                     sweepLine = L.polyline([], { color: '#4da8da', weight: 2, opacity: 0.7 }).addTo(map);
 
                     startSweep();
-                    startAutoScan();
+                    // No more auto simulation scans – rely on Arduino
                 },
                 (err) => {
                     // Fallback
@@ -361,7 +365,6 @@
                     rangeCircle = L.circle([-6.8, 39.2], { radius: 500, color: '#4da8da', weight: 1, fillOpacity: 0.05, dashArray: '4,4' }).addTo(map);
                     sweepLine = L.polyline([], { color: '#4da8da', weight: 2, opacity: 0.7 }).addTo(map);
                     startSweep();
-                    startAutoScan();
                 },
                 { enableHighAccuracy: true, timeout: 5000 }
             );
@@ -431,150 +434,67 @@
             } catch (e) {}
         }
 
-        // ---------- Auto Detection ----------
-        let detectionActive = false;
-        let autoScanInterval;
+        // ---------- Firestore Listener for Arduino Detections ----------
+        function listenForDetections()
+        {
+            db.collection("simulations")
+              .where("source", "==", "arduino")
+              .orderBy("timestamp", "desc")
+              .limit(1)
+              .onSnapshot((snapshot) =>
+              {
+                  if (snapshot.empty)
+                      return;
 
-        function startAutoScan() {
-            if (autoScanInterval) clearTimeout(autoScanInterval);
-            scheduleNextScan();
-        }
+                  const doc = snapshot.docs[0];
 
-        function scheduleNextScan() {
-            const delay = 6000 + Math.floor(Math.random() * 8000);
-            autoScanInterval = setTimeout(() => {
-                runDetection();
-                scheduleNextScan();
-            }, delay);
-        }
+                  if (lastDetectionId === null)
+                  {
+                      lastDetectionId = doc.id;
+                      return;
+                  }
 
-        async function runDetection() {
-            if (detectionActive || !map) return;
-            detectionActive = true;
+                  if (doc.id === lastDetectionId)
+                      return;
 
-            const center = userMarker ? userMarker.getLatLng() : map.getCenter();
-            const lat = center.lat;
-            const lng = center.lng;
+                  lastDetectionId = doc.id;
 
-            // Random protocol to simulate different signals
-            const protocols = ['wifi', 'lora', 'dji'];
-            const protocol = protocols[Math.floor(Math.random() * protocols.length)];
+                  const data = doc.data();
 
-            // Place a threat marker at a random offset
-            const offsetLat = (Math.random() - 0.5) * 0.015;
-            const offsetLng = (Math.random() - 0.5) * 0.015;
-            const threatLat = lat + offsetLat;
-            const threatLng = lng + offsetLng;
+                  playAlertSound();
 
-            // Call backend to analyze the signal
-            try {
-                const user = auth.currentUser;
-                if (!user) throw new Error('Not authenticated');
-                const idToken = await user.getIdToken();
-                const response = await fetch(`${API_BASE}/api/simulate`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${idToken}`
-                    },
-                    body: JSON.stringify({ protocol })
-                });
-                if (!response.ok) throw new Error('Analysis failed');
-                const data = await response.json();
+                  document.getElementById("detectionStatus").style.display = "none";
+                  document.getElementById("reportDetails").style.display = "block";
 
-                // Decision logic: a threat if confidence > 0.6, else benign
-                const isThreat = data.confidence > 0.6;
+                  document.getElementById("badgeContainer").innerHTML =
+                      '<span class="alert-badge"><i class="fas fa-exclamation-triangle"></i> Threat Detected</span>';
 
-                // Choose icon and line color
-                const iconHtml = isThreat 
-                    ? '<i class="fas fa-fighter-jet" style="color:#f87171; font-size:20px;"></i>'
-                    : '<i class="fas fa-plane" style="color:#fbbf24; font-size:20px;"></i>';
-                const lineColor = isThreat ? '#f87171' : '#fbbf24';
+                  document.getElementById("contactType").textContent =
+                      mapDroneName(data.detectedProtocol);
 
-                const threatIcon = L.divIcon({
-                    className: 'threat-icon',
-                    html: iconHtml,
-                    iconSize: [24, 24],
-                    iconAnchor: [12, 12]
-                });
-                const threatMarker = L.marker([threatLat, threatLng], { icon: threatIcon }).addTo(map);
-                const attackLine = L.polyline([center, [threatLat, threatLng]], {
-                    color: lineColor,
-                    weight: 1,
-                    dashArray: isThreat ? '4,4' : '10,5',
-                    opacity: 0.8
-                }).addTo(map);
-                threatMarkers.push(threatMarker, attackLine);
+                  document.getElementById("confidence").textContent =
+                      (data.confidence * 100).toFixed(1) + "%";
 
-                // Update UI
-                const statusEl = document.getElementById('detectionStatus');
-                const detailsDiv = document.getElementById('reportDetails');
-                const badgeContainer = document.getElementById('badgeContainer');
+                  document.getElementById("jamType").textContent =
+                      mapJamName(data.jammingParams.modulation);
 
-                statusEl.style.display = 'none';
-                detailsDiv.style.display = 'block';
+                  document.getElementById("jamFreq").textContent =
+                      (data.jammingParams.center_freq_hz / 1000000).toFixed(2) + " MHz";
 
-                if (isThreat) {
-                    badgeContainer.innerHTML = '<span class="alert-badge"><i class="fas fa-exclamation-triangle"></i> Threat Detected</span>';
-                    document.getElementById('contactType').textContent = mapDroneName(data.detected_protocol);
-                    document.getElementById('confidence').textContent = (data.confidence * 100).toFixed(1) + '%';
-                    document.getElementById('jamType').textContent = mapJamName(data.jamming.modulation);
-                    playAlertSound();
+                  document.getElementById("jamBW").textContent =
+                      (data.jammingParams.bandwidth_hz / 1000).toFixed(1) + " kHz";
 
-                    // Log to Firestore
-                    db.collection('simulations').add({
-                        userId: user.uid,
-                        userEmail: user.email,
-                        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                        protocolRequested: protocol,
-                        detectedProtocol: data.detected_protocol,
-                        confidence: data.confidence,
-                        jammingParams: data.jamming
-                    });
-                    loadHistory(user.uid);
+                  document.getElementById("jamPower").textContent =
+                      data.jammingParams.power_dbm + " dBm";
 
-                    // Change marker to neutralized after 2s
-                    setTimeout(() => {
-                        threatMarker.setIcon(L.divIcon({
-                            className: 'threat-icon',
-                            html: '<i class="fas fa-check-circle" style="color:#22c55e; font-size:20px;"></i>',
-                            iconSize: [24,24],
-                            iconAnchor: [12,12]
-                        }));
-                        attackLine.setStyle({ color: '#22c55e' });
-                    }, 2000);
-                } else {
-                    badgeContainer.innerHTML = '<span class="friendly-badge"><i class="fas fa-check-circle"></i> Friendly / Unknown</span>';
-                    document.getElementById('contactType').textContent = 'Passenger Aircraft / Unknown';
-                    document.getElementById('confidence').textContent = (data.confidence * 100).toFixed(1) + '% (non‑drone)';
-                    document.getElementById('jamType').textContent = 'Monitoring (no threat)';
-                }
+                  loadHistory();
 
-                // Always fill real parameters
-                document.getElementById('jamFreq').textContent = (data.jamming.center_freq_hz / 1e6).toFixed(2) + ' MHz';
-                document.getElementById('jamBW').textContent = (data.jamming.bandwidth_hz / 1e3).toFixed(1) + ' kHz';
-                document.getElementById('jamPower').textContent = data.jamming.power_dbm + ' dBm';
-                const img = document.getElementById('spectrogramImg');
-                if (data.spectrogram_url) {
-                    img.src = API_BASE + data.spectrogram_url;
-                    img.style.display = 'block';
-                } else {
-                    img.style.display = 'none';
-                }
-
-                // Clean up after delay
-                setTimeout(() => {
-                    threatMarkers.forEach(m => map.removeLayer(m));
-                    threatMarkers = [];
-                    document.getElementById('detectionStatus').style.display = 'block';
-                    document.getElementById('reportDetails').style.display = 'none';
-                }, isThreat ? 10000 : 7000);
-
-            } catch (err) {
-                console.error('Detection error:', err);
-            } finally {
-                detectionActive = false;
-            }
+                  setTimeout(() =>
+                  {
+                      document.getElementById("detectionStatus").style.display = "block";
+                      document.getElementById("reportDetails").style.display = "none";
+                  }, 10000);
+              });
         }
 
         function mapDroneName(p) {
@@ -586,18 +506,18 @@
             return names[m] || m.replace('_', ' ');
         }
 
-        // ---------- History ----------
-        async function loadHistory(uid) {
+        // ---------- History (Arduino only) ----------
+        async function loadHistory() {
             const container = document.getElementById('historyContainer');
             try {
                 const snapshot = await db.collection('simulations')
-                    .where('userId', '==', uid)
+                    .where('source', '==', 'arduino')
                     .orderBy('timestamp', 'desc')
                     .limit(5)
                     .get();
 
                 if (snapshot.empty) {
-                    container.innerHTML = '<p style="color:#94a3b8;">No missions logged yet.</p>';
+                    container.innerHTML = '<p style="color:#94a3b8;">No hardware detections yet.</p>';
                     return;
                 }
 
@@ -616,7 +536,7 @@
                 html += '</tbody></table>';
                 container.innerHTML = html;
             } catch (e) {
-                container.innerHTML = `<p style="color:#f87171;">Error loading history.</p>`;
+                container.innerHTML = `<p style="color:#f87171;">Error loading history: ${e.message}</p>`;
             }
         }
 
