@@ -437,16 +437,24 @@
         // ---------- Firestore Listener for Arduino Detections ----------
         function listenForDetections()
         {
+            // Listen to the latest 20 docs, then filter for arduino source client-side
             db.collection("simulations")
-              .where("source", "==", "arduino")
               .orderBy("timestamp", "desc")
-              .limit(1)
+              .limit(20)
               .onSnapshot((snapshot) =>
               {
                   if (snapshot.empty)
                       return;
 
-                  const doc = snapshot.docs[0];
+                  // Filter only arduino documents
+                  const arduinoDocs = snapshot.docs.filter(
+                      d => d.data().source === "arduino"
+                  );
+
+                  if (arduinoDocs.length === 0)
+                      return;
+
+                  const doc = arduinoDocs[0];
 
                   if (lastDetectionId === null)
                   {
@@ -510,10 +518,10 @@
         async function loadHistory() {
             const container = document.getElementById('historyContainer');
             try {
+                // Get latest 20, filter for arduino, then take 5
                 const snapshot = await db.collection('simulations')
-                    .where('source', '==', 'arduino')
                     .orderBy('timestamp', 'desc')
-                    .limit(5)
+                    .limit(20)
                     .get();
 
                 if (snapshot.empty) {
@@ -521,9 +529,19 @@
                     return;
                 }
 
+                // Filter and slice to latest 5 arduino documents
+                const arduinoDocs = snapshot.docs
+                    .filter(doc => doc.data().source === "arduino")
+                    .slice(0, 5);
+
+                if (arduinoDocs.length === 0) {
+                    container.innerHTML = '<p style="color:#94a3b8;">No hardware detections yet.</p>';
+                    return;
+                }
+
                 let html = `<table class="history-table">
                     <thead><tr><th>Time</th><th>Target</th><th>Action</th><th>Conf</th></tr></thead><tbody>`;
-                snapshot.forEach(doc => {
+                arduinoDocs.forEach(doc => {
                     const d = doc.data();
                     const time = d.timestamp ? d.timestamp.toDate().toLocaleTimeString() : 'Now';
                     html += `<tr>
