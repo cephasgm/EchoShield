@@ -213,7 +213,7 @@
             <div class="card" id="resultsCard">
                 <h2><span>Detection</span> Report</h2>
                 <div id="detectionContent">
-                    <p id="detectionStatus" style="color:#94a3b8;">Awaiting EchoShield hardware...<br><button class="btn btn-outline" id="manualRefresh" style="margin-top:0.5rem;"><i class="fas fa-sync-alt"></i> Check Now</button></p>
+                    <p id="detectionStatus" style="color:#94a3b8;">Awaiting EchoShield hardware...</p>
                     <div id="reportDetails" style="display:none;">
                         <div id="badgeContainer"></div>
                         <div class="result-grid">
@@ -292,26 +292,21 @@
         const db = firebase.firestore();
         const API_BASE = 'https://echoshield-api-4x6z.onrender.com';
 
-        let lastDetectionTimestamp = 0;
+        let lastDetectionTimestamp = 0;   // milliseconds
         let lastHardwarePing = Date.now();
-        let realtimeListener = null;
 
         auth.onAuthStateChanged(async (user) => {
             if (!user) { window.location.href = 'signin.html'; return; }
             document.getElementById('userEmail').textContent = user.email;
-            // Initial load
-            await refreshAllData();
-            // Start real‑time listener
-            startRealtimeListener();
+            loadHistory();
+            updateStatistics();
+            listenForDetections();
             initMap();
         });
 
         document.getElementById('logoutBtn').addEventListener('click', () => {
             auth.signOut().then(() => window.location.href = 'signin.html');
         });
-
-        // Manual refresh button
-        document.getElementById('manualRefresh').addEventListener('click', refreshAllData);
 
         // ---------- Map & Radar ----------
         let map, userMarker, rangeCircle, sweepLine;
@@ -434,154 +429,111 @@
             } catch (e) {}
         }
 
-        // ---------- Fetch latest Arduino document (fallback) ----------
-        async function fetchLatestArduino() {
-            try {
-                // Simple query without orderBy – we get all and take the latest client‑side
-                const snapshot = await db.collection('simulations')
-                    .where('source', '==', 'arduino')
-                    .get();
-
-                if (snapshot.empty) return null;
-
-                let latestDoc = null;
-                let latestTime = 0;
-                snapshot.forEach(doc => {
-                    const data = doc.data();
-                    const ts = data.timestamp ? data.timestamp.toMillis() : 0;
-                    if (ts > latestTime) {
-                        latestTime = ts;
-                        latestDoc = { id: doc.id, data: data };
-                    }
-                });
-                return latestDoc;
-            } catch (e) {
-                console.error("Fetch error:", e);
-                return null;
-            }
-        }
-
-        // ---------- Update UI from document data ----------
-        function processDetection(data) {
-            console.log("Processing detection:", data);
-            lastHardwarePing = Date.now();
-            document.getElementById('systemStatus').textContent = 'HARDWARE ONLINE';
-
-            // Command Center
-            document.getElementById('liveDistance').textContent = (data.distance_cm ?? '---') + ' cm';
-            document.getElementById('lastTarget').textContent = mapDroneName(data.detectedProtocol || 'wifi');
-
-            const threatEl = document.getElementById('threatLevel');
-            threatEl.textContent = data.zone || 'CLEAR';
-            const colorMap = { CLEAR: '#22c55e', MONITOR: '#3b82f6', WARNING: '#f59e0b', THREAT: '#ef4444' };
-            threatEl.style.color = colorMap[data.zone] || '#fff';
-
-            // Detection Report
-            document.getElementById('detectionStatus').style.display = 'none';
-            document.getElementById('reportDetails').style.display = 'block';
-            document.getElementById('contactType').textContent = mapDroneName(data.detectedProtocol || 'wifi');
-            document.getElementById('confidence').textContent = ((data.confidence || 0) * 100).toFixed(1) + '%';
-            document.getElementById('jamType').textContent = data.jammingParams ? mapJamName(data.jammingParams.modulation) : 'None';
-            document.getElementById('jamFreq').textContent = data.jammingParams ? (data.jammingParams.center_freq_hz / 1e6).toFixed(2) + ' MHz' : '---';
-            document.getElementById('jamBW').textContent = data.jammingParams ? (data.jammingParams.bandwidth_hz / 1e3).toFixed(1) + ' kHz' : '---';
-            document.getElementById('jamPower').textContent = data.jammingParams ? data.jammingParams.power_dbm + ' dBm' : '---';
-
-            // Map marker
-            if (map && userMarker) {
-                const pos = userMarker.getLatLng();
-                const iconHtml = data.zone === 'THREAT'
-                    ? '<i class="fas fa-fighter-jet" style="color:#f87171; font-size:20px;"></i>'
-                    : '<i class="fas fa-exclamation-circle" style="color:#f59e0b; font-size:20px;"></i>';
-                const marker = L.marker(pos, {
-                    icon: L.divIcon({ className: 'threat-icon', html: iconHtml, iconSize: [24,24], iconAnchor: [12,12] })
-                }).addTo(map);
-                threatMarkers.push(marker);
-                setTimeout(() => { map.removeLayer(marker); threatMarkers = threatMarkers.filter(m => m !== marker); }, 10000);
-            }
-
-            // Alert only on confirmed THREAT
-            if (data.zone === 'THREAT' && data.threat === true) {
-                playAlertSound();
-            }
-        }
-
-        // ---------- Realtime listener (no orderBy, no limit) ----------
-        function startRealtimeListener() {
-            if (realtimeListener) realtimeListener(); // cleanup previous
-            realtimeListener = db.collection('simulations')
+        // ---------- Real‑time Listener (NO composite index needed) ----------
+        function listenForDetections() {
+            db.collection('simulations')
                 .where('source', '==', 'arduino')
                 .onSnapshot(
                     (snapshot) => {
-                        console.log("Realtime snapshot received, docs:", snapshot.size);
-                        // Find latest by timestamp
+                        console.log("Snapshot received, docs:", snapshot.size);
+
+                        // Find the latest document with a valid timestamp
                         let latestDoc = null;
-                        let latestTime = lastDetectionTimestamp; // start from last known
-                        snapshot.forEach(doc => {
+                        let latestTime = 0;
+
+                        snapshot.forEach((doc) => {
                             const data = doc.data();
-                            const ts = data.timestamp ? data.timestamp.toMillis() : 0;
+                            // Ignore docs that still have a pending timestamp (null)
+                            if (!data.timestamp) return;
+                            const ts = data.timestamp.toMillis ? data.timestamp.toMillis() : 0;
                             if (ts > latestTime) {
                                 latestTime = ts;
-                                latestDoc = { id: doc.id, data: data };
+                                latestDoc = doc;
                             }
                         });
-                        if (latestDoc && latestTime > lastDetectionTimestamp) {
-                            lastDetectionTimestamp = latestTime;
-                            processDetection(latestDoc.data);
-                            refreshHistory();
-                            refreshStats();
+
+                        if (!latestDoc) {
+                            console.log("No valid detection with timestamp yet.");
+                            return;
                         }
+
+                        const data = latestDoc.data();
+                        console.log("LIVE FIRESTORE EVENT", data);
+
+                        // Deduplication: only process if this timestamp is newer than last processed
+                        if (latestTime <= lastDetectionTimestamp) return;
+                        lastDetectionTimestamp = latestTime;
+
+                        // Hardware ping
+                        lastHardwarePing = Date.now();
+                        document.getElementById('systemStatus').textContent = 'HARDWARE ONLINE';
+
+                        // Command Center
+                        document.getElementById('liveDistance').textContent =
+                            (data.distance_cm || '---') + ' cm';
+                        document.getElementById('lastTarget').textContent =
+                            mapDroneName(data.detectedProtocol || 'wifi');
+
+                        const threatElement = document.getElementById('threatLevel');
+                        threatElement.textContent = data.zone || 'CLEAR';
+                        const colorMap = {
+                            CLEAR: '#22c55e',
+                            MONITOR: '#3b82f6',
+                            WARNING: '#f59e0b',
+                            THREAT: '#ef4444'
+                        };
+                        threatElement.style.color = colorMap[data.zone] || '#fff';
+
+                        // Detection Report
+                        document.getElementById('detectionStatus').style.display = 'none';
+                        document.getElementById('reportDetails').style.display = 'block';
+                        document.getElementById('contactType').textContent =
+                            mapDroneName(data.detectedProtocol || 'wifi');
+                        document.getElementById('confidence').textContent =
+                            ((data.confidence || 0) * 100).toFixed(1) + '%';
+                        document.getElementById('jamType').textContent =
+                            data.jammingParams ? mapJamName(data.jammingParams.modulation) : 'None';
+                        document.getElementById('jamFreq').textContent =
+                            data.jammingParams ? (data.jammingParams.center_freq_hz / 1e6).toFixed(2) + ' MHz' : '---';
+                        document.getElementById('jamBW').textContent =
+                            data.jammingParams ? (data.jammingParams.bandwidth_hz / 1e3).toFixed(1) + ' kHz' : '---';
+                        document.getElementById('jamPower').textContent =
+                            data.jammingParams ? data.jammingParams.power_dbm + ' dBm' : '---';
+
+                        // Map: threat marker
+                        if (map && userMarker) {
+                            const pos = userMarker.getLatLng();
+                            const threatIcon = L.divIcon({
+                                className: 'threat-icon',
+                                html: (data.zone === 'THREAT') 
+                                    ? '<i class="fas fa-fighter-jet" style="color:#f87171; font-size:20px;"></i>'
+                                    : '<i class="fas fa-exclamation-circle" style="color:#f59e0b; font-size:20px;"></i>',
+                                iconSize: [24,24], iconAnchor: [12,12]
+                            });
+                            const marker = L.marker(pos, { icon: threatIcon }).addTo(map);
+                            threatMarkers.push(marker);
+                            setTimeout(() => {
+                                map.removeLayer(marker);
+                                threatMarkers = threatMarkers.filter(m => m !== marker);
+                            }, 10000);
+                        }
+
+                        // Alert only for confirmed THREAT
+                        if (data.zone === 'THREAT' && data.threat === true) {
+                            playAlertSound();
+                        }
+
+                        loadHistory();
+                        updateStatistics();
                     },
                     (error) => {
-                        console.error("Realtime listener error:", error);
-                        // Fallback to polling every 5s if listener fails
-                        if (!window._fallbackPoll) {
-                            window._fallbackPoll = setInterval(refreshAllData, 5000);
-                        }
+                        console.error("Listener Error:", error);
                     }
                 );
         }
 
-        // ---------- History (client‑side sort) ----------
-        async function refreshHistory() {
-            const container = document.getElementById('historyContainer');
-            try {
-                const snapshot = await db.collection('simulations')
-                    .where('source', '==', 'arduino')
-                    .get();
-
-                const docs = [];
-                snapshot.forEach(doc => docs.push({ id: doc.id, data: doc.data() }));
-                docs.sort((a, b) => {
-                    const ta = a.data.timestamp ? a.data.timestamp.toMillis() : 0;
-                    const tb = b.data.timestamp ? b.data.timestamp.toMillis() : 0;
-                    return tb - ta;
-                });
-
-                if (docs.length === 0) {
-                    container.innerHTML = '<p style="color:#94a3b8;">No hardware missions logged yet.</p>';
-                    return;
-                }
-
-                let html = `<table class="history-table">
-                    <thead><tr><th>Time</th><th>Target</th><th>Action</th><th>Conf</th></tr></thead><tbody>`;
-                docs.slice(0, 5).forEach(({ data }) => {
-                    const time = data.timestamp ? data.timestamp.toDate().toLocaleTimeString() : 'Now';
-                    html += `<tr>
-                        <td>${time}</td>
-                        <td>${mapDroneName(data.detectedProtocol || 'wifi')}</td>
-                        <td>${mapJamName((data.jammingParams && data.jammingParams.modulation) || 'wideband_noise')}</td>
-                        <td>${((data.confidence || 0) * 100).toFixed(0)}%</td>
-                    </tr>`;
-                });
-                html += '</tbody></table>';
-                container.innerHTML = html;
-            } catch (e) {
-                container.innerHTML = `<p style="color:#f87171;">Error: ${e.message}</p>`;
-            }
-        }
-
         // ---------- Statistics ----------
-        async function refreshStats() {
+        async function updateStatistics() {
             try {
                 const snapshot = await db.collection('simulations')
                     .where('source', '==', 'arduino')
@@ -594,25 +546,15 @@
                 });
                 document.getElementById('detectionsToday').textContent = detections;
                 document.getElementById('threatsNeutralized').textContent = neutralized;
-            } catch (e) {}
-        }
-
-        // ---------- Combined refresh (initial load + manual) ----------
-        async function refreshAllData() {
-            const latest = await fetchLatestArduino();
-            if (latest) {
-                if (latest.timestamp > lastDetectionTimestamp) {
-                    lastDetectionTimestamp = latest.timestamp;
-                    processDetection(latest.data);
-                }
+            } catch (e) {
+                console.error('Statistics error:', e);
             }
-            refreshHistory();
-            refreshStats();
         }
 
-        // ---------- Hardware offline watchdog ----------
+        // ---------- System Status Watchdog ----------
         setInterval(() => {
-            if (Date.now() - lastHardwarePing > 30000) {
+            const age = Date.now() - lastHardwarePing;
+            if (age > 30000) {
                 document.getElementById('systemStatus').textContent = 'HARDWARE OFFLINE';
             }
         }, 5000);
@@ -624,6 +566,48 @@
         function mapJamName(m) {
             const names = { wideband_noise: 'Wideband Barrage', chirp_jammer: 'Chirp Disruptor', sweeping_tone: 'Sweeping Jammer' };
             return names[m] || m.replace('_', ' ');
+        }
+
+        // ---------- History (no composite index) ----------
+        async function loadHistory() {
+            const container = document.getElementById('historyContainer');
+            try {
+                const snapshot = await db.collection('simulations')
+                    .where('source', '==', 'arduino')
+                    .get();
+
+                const docs = [];
+                snapshot.forEach(doc => docs.push(doc));
+
+                // Sort by timestamp descending
+                docs.sort((a, b) => {
+                    const ta = a.data().timestamp ? a.data().timestamp.toMillis() : 0;
+                    const tb = b.data().timestamp ? b.data().timestamp.toMillis() : 0;
+                    return tb - ta;
+                });
+
+                if (docs.length === 0) {
+                    container.innerHTML = '<p style="color:#94a3b8;">No hardware missions logged yet.</p>';
+                    return;
+                }
+
+                let html = `<table class="history-table">
+                    <thead><tr><th>Time</th><th>Target</th><th>Action</th><th>Conf</th></tr></thead><tbody>`;
+                docs.slice(0, 5).forEach(doc => {
+                    const d = doc.data();
+                    const time = d.timestamp ? d.timestamp.toDate().toLocaleTimeString() : 'Now';
+                    html += `<tr>
+                        <td>${time}</td>
+                        <td>${mapDroneName(d.detectedProtocol || 'wifi')}</td>
+                        <td>${mapJamName((d.jammingParams && d.jammingParams.modulation) || 'wideband_noise')}</td>
+                        <td>${((d.confidence || 0)*100).toFixed(0)}%</td>
+                    </tr>`;
+                });
+                html += '</tbody></table>';
+                container.innerHTML = html;
+            } catch (e) {
+                container.innerHTML = `<p style="color:#f87171;">Error loading history: ${e.message}</p>`;
+            }
         }
 
         // PWA
