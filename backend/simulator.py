@@ -53,28 +53,43 @@ def generate_dji_hopping(duration=0.5, fs=10e6):
         signal[i:end] = np.exp(2j * np.pi * ch * t[i:end])
     return signal
 
-def generate_iq_and_spectrogram(protocol, duration=0.5):
-    """Generate IQ signal and its spectrogram for given protocol."""
-    if protocol == 'wifi':
-        fs = 10e6
-        iq = generate_wifi(duration, fs)
-    elif protocol == 'lora':
-        fs = 1e6
-        iq = generate_lora(duration, fs)
-    elif protocol == 'dji':
-        fs = 10e6
-        iq = generate_dji_hopping(duration, fs)
-    else:
-        raise ValueError('Unknown protocol')
+def generate_iq_and_spectrogram(protocol, duration=0.05):
+"""
+Generate a lightweight demo signal and spectrogram.
+Optimized for Render deployment.
+"""
 
-    # Compute spectrogram using our own numpy function
-    f, t_spec, Sxx = spectrogram_np(iq, fs, nperseg=256, noverlap=128)
-    if Sxx.size == 0:
-        # Fallback: create a dummy spectrogram of size 128x128
-        Sxx_norm = np.zeros((128,128))
-    else:
-        Sxx_dB = 10 * np.log10(Sxx + 1e-12)
-        Sxx_norm = (Sxx_dB - Sxx_dB.min()) / (Sxx_dB.max() - Sxx_dB.min() + 1e-12)
-        # Resize to 128x128 for the AI model (if needed) – the classifier expects 128x128
-        # We'll just use the raw size; the classifier currently uses the whole array.
-    return iq, Sxx_norm
+if protocol == 'wifi':
+    fs = 100000
+    iq = generate_wifi(duration, fs)
+
+elif protocol == 'lora':
+    fs = 100000
+    iq = generate_lora(duration, fs)
+
+elif protocol == 'dji':
+    fs = 100000
+    iq = generate_dji_hopping(duration, fs)
+
+else:
+    raise ValueError('Unknown protocol')
+
+f, t_spec, Sxx = spectrogram_np(
+    iq,
+    fs,
+    nperseg=128,
+    noverlap=64
+)
+
+if Sxx.size == 0:
+    Sxx_norm = np.zeros((128, 128))
+else:
+    Sxx_dB = 10 * np.log10(Sxx + 1e-12)
+
+    Sxx_norm = (
+        Sxx_dB - Sxx_dB.min()
+    ) / (
+        Sxx_dB.max() - Sxx_dB.min() + 1e-12
+    )
+
+return iq, Sxx_norm
