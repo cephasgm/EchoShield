@@ -293,14 +293,6 @@ const db = firebase.firestore();
 const API_BASE = 'https://echoshield-api-4x6z.onrender.com';
 
 // TEST FIRESTORE READ
-db.collection("simulations")
-.get()
-.then((snap) => {
-
-})
-.catch((err) => {
-
-});
 
         let lastDetectionTimestamp = 0;   // milliseconds
         let lastHardwarePing = Date.now();
@@ -328,7 +320,7 @@ db.collection("simulations")
 
         function initMap() {
             if (!navigator.geolocation) {
-               
+                alert('Geolocation not supported');
                 return;
             }
             navigator.geolocation.getCurrentPosition(
@@ -442,51 +434,52 @@ db.collection("simulations")
         // ---------- Real‑time Listener (NO composite index needed) ----------
         function listenForDetections() {
             db.collection('simulations')
-.orderBy('timestamp', 'desc')
-.limit(5)
-.onSnapshot(...)
-                        console.log("Snapshot received, docs:", snapshot.size);
-snapshot.forEach((doc) => {
-               
+    .orderBy('timestamp', 'desc')
+    .limit(5)
+    .onSnapshot(
+        (snapshot) => {
+
+            console.log(
+                "Snapshot received, docs:",
+                snapshot.size
+            );
+
+            let latestDoc = null;
+            let latestTime = 0;
+
+            snapshot.forEach((doc) => {
+
+                const data = doc.data();
+
+                if (!data.timestamp) return;
+
+                const ts =
+                    data.timestamp.toMillis
+                    ? data.timestamp.toMillis()
+                    : 0;
+
+                if (ts > latestTime)
+                {
+                    latestTime = ts;
+                    latestDoc = doc;
+                }
             });
 
+            if (!latestDoc)
+            {
+                console.log(
+                    "No valid detection with timestamp yet."
+                );
 
-                        // Find the latest document with a valid timestamp
-                        let latestDoc = null;
-                        let latestTime = 0;
-snapshot.forEach((doc) => {
-    const data = doc.data();
+                return;
+            }
 
-    if (!data.timestamp) return;
+            const data = latestDoc.data();
 
-    const ts = data.timestamp.toMillis
-        ? data.timestamp.toMillis()
-        : 0;
-
-    if (ts > latestTime) {
-        latestTime = ts;
-        latestDoc = doc;
-    }
-});
-
-                        snapshot.forEach((doc) => {
-                            const data = doc.data();
-                            // Ignore docs that still have a pending timestamp (null)
-                            if (!data.timestamp) return;
-                            const ts = data.timestamp.toMillis ? data.timestamp.toMillis() : 0;
-                            if (ts > latestTime) {
-                                latestTime = ts;
-                                latestDoc = doc;
-                            }
-                        });
-
-                        if (!latestDoc) {
-                            console.log("No valid detection with timestamp yet.");
-                            return;
-                        }
-
-                        const data = latestDoc.data();
-                        console.log("LIVE FIRESTORE EVENT", data);
+            console.log(
+                "LIVE FIRESTORE EVENT",
+                data
+            );
 
                         // Deduplication: only process if this timestamp is newer than last processed
                         if (latestTime <= lastDetectionTimestamp) return;
