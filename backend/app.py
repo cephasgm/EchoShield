@@ -317,16 +317,25 @@ def arduino_detect():
                 jam
         }
 
-        log_detection(
-            document
-        )
+        try:
 
-        print(
-            f"Arduino Detection | "
-            f"Distance={distance_cm}cm "
-            f"Zone={zone} "
-            f"Threat={threat}"
-        )
+    log_detection(
+        document
+    )
+
+except Exception as e:
+
+    print(
+        "Firestore skipped:",
+        str(e)
+    )
+
+print(
+    f"Arduino Detection | "
+    f"Distance={distance_cm}cm "
+    f"Zone={zone} "
+    f"Threat={threat}"
+)
 
         return jsonify({
 
