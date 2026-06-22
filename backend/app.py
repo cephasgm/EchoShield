@@ -319,23 +319,23 @@ def arduino_detect():
 
         try:
 
-    log_detection(
-        document
-    )
+            log_detection(
+                document
+            )
 
-except Exception as e:
+        except Exception as e:
 
-    print(
-        "Firestore skipped:",
-        str(e)
-    )
+            print(
+                "Firestore skipped:",
+                str(e)
+            )
 
-print(
-    f"Arduino Detection | "
-    f"Distance={distance_cm}cm "
-    f"Zone={zone} "
-    f"Threat={threat}"
-)
+        print(
+            f"Arduino Detection | "
+            f"Distance={distance_cm}cm "
+            f"Zone={zone} "
+            f"Threat={threat}"
+        )
 
         return jsonify({
 
@@ -357,7 +357,6 @@ print(
             "threat":
                 threat
         })
-
     except Exception as e:
 
         traceback.print_exc()
